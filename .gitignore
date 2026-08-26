@@ -11,6 +11,7 @@ node_modules/
 fonts/*/*/*-msdf.json
 fonts/*/*/*-msdf.png
 fonts/*/*/source/
+fonts/*/*/charset.txt
 
 # Preview SVGs (fonts/*/*.svg) are NOT ignored, unlike the atlas/source above — they're
 # deliberately committed for the full catalog (scripts/generate_all_previews.mjs), ~33MB total,

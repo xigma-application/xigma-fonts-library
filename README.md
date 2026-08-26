@@ -191,6 +191,32 @@ script with no glyphs to render their own Latin-alphabet name (Khmer, Noto Serif
 *Emoji, Karla Tamil *, ...), plus a handful where Google's CSS2 API doesn't serve a plain `400`
 for that specific family. Failure details land in `.cache/preview-failures.json` (gitignored).
 
+## `scripts/bake_all_fonts.mjs` — the whole catalog, baked up front
+
+Like `generate_all_previews.mjs`, but for the real atlas — every `(family, weight, style)` in
+`data/google-fonts-catalog.json`, not just one representative weight. Source TTF comes from
+`scripts/lib/googleFontsCss.mjs` (Google's CSS2 API again, requesting the *exact* weight instead of
+a fixed 400), which sidesteps `scripts/freeze_variable_font.py` entirely — Google's servers already
+instance it, so this feeds straight into `scripts/bake_atlas.cjs`. Same reasoning as the preview
+script for why this beats `scripts/lib/googleFontsSource.mjs` (GitHub) as a source: no rate limit,
+and it works for static-only families too, not just the ones with a `[...]` variable font.
+
+```bash
+node scripts/bake_all_fonts.mjs
+```
+
+Skips anything already baked, so it's safe to re-run/resume — real run, in three resumed pieces
+after the local process got killed mid-run twice (unrelated to the script itself): **7780/7855
+`(family, weight, style)` combinations baked, 75 failed** (99% coverage), leaving **2283 of 2292**
+catalog entries with at least one real, usable atlas. Failures are two explainable kinds: a few
+fonts don't actually serve their claimed extreme weights (100 or 1000) from Google's CSS2 API
+despite the catalog listing them, and a handful of fonts (`Handjet`, `Fredericka the Great`,
+`Geist Pixel`) have glyph outlines the native `msdfgen` binary's shape parser rejects outright.
+Details land in `.cache/bake-failures.json` (gitignored). Final local footprint: **`fonts/` ~2.6 GB,
+`.cache/` ~4.7 GB** — this is the "several GB" the sizing note below always said full coverage would
+cost; both stay gitignored (only each variant's `charset.txt` is tracked), exactly per the "I need
+this locally, I'm probably never putting this on a server" scoping decision.
+
 ## `scripts/serve.mjs` — local dev server, bakes atlases on demand
 
 This repo is a local sandbox, not something meant to run on a server (see "What's committed vs.
@@ -251,11 +277,12 @@ atlas, only ever needed for the one font actually selected), so unlike the atlas
 can't be deferred to "bake it somewhere later." 33MB total across all 2276 generated previews is a
 completely different scale problem than the atlas/source GB figures below.
 
-**Sizing, for why the atlas/source split matters**: our own baked Inter (18 variants, this repo's
-real worked example) averages ~760 KB/variant (source TTF + atlas json + png). Google Fonts' own
-metadata (`fonts.google.com/metadata/fonts`) lists 1946 families averaging 4.04 styles each — baking
-every atlas at that rate would be **~6 GB**, which is exactly why atlas/source stay gitignored while
-previews (a completely different, much smaller order of magnitude) don't.
+**Sizing, for why the atlas/source split matters**: this was estimated at ~6 GB (Inter's own
+~760 KB/variant × Google's own average of 4.04 styles/family × 1946 families) before
+`scripts/bake_all_fonts.mjs` actually baked the full catalog — real measured total came in at
+**`fonts/` ~2.6 GB + `.cache/` ~4.7 GB**, in the same ballpark. Either way, nowhere close to
+git-shippable, which is exactly why atlas/source stay gitignored while previews (a completely
+different, much smaller order of magnitude — 33 MB total) don't.
 
 ## `fonts/Inter/Inter-400/` — a real, worked example
 
@@ -270,10 +297,12 @@ a local, gitignored artifact of having run the pipeline, same as any other consu
 
 ## Not built yet
 
-- On-demand TTF download and bake-on-miss atlas generation **are** built now (`scripts/serve.mjs`)
-  — but only for variable-font families; a family that ships only static per-weight files isn't
-  supported by atlas baking yet (the preview script's Google CSS2-API path doesn't carry over,
-  since atlas baking needs a freezable variable font, not a pre-instanced weight).
+- On-demand TTF download and bake-on-miss atlas generation **are** built now
+  (`scripts/serve.mjs`) — but it still sources from GitHub/`googleFontsSource.mjs`, so it only
+  covers variable-font families, same limitation as before. `scripts/bake_all_fonts.mjs` doesn't
+  have this limitation (it uses the CSS2-API path, `googleFontsCss.mjs`, which works for
+  static-only families too) — `serve.mjs` just hasn't been switched over to it, since with the
+  full catalog now pre-baked, on-demand baking is mostly moot until the catalog itself changes.
 - Actually publishing baked output anywhere (CDN/hosting) — bake output is local-only right now;
   "gitignored" just means it isn't shipped via *this* repo, not that it's shipped anywhere else yet.
 - A real "bake on first request, cache on CDN forever" flow for **production** (multiple
