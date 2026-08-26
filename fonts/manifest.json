@@ -1,6 +1,7 @@
 [
   {
     "name": "Inter",
+    "preview": "Inter/Inter.svg",
     "weights": [
       {
         "weight": 100,
@@ -51,6 +52,7 @@
   },
   {
     "name": "Inter Italic",
+    "preview": "Inter/Inter-Italic.svg",
     "weights": [
       {
         "weight": 100,

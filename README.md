@@ -99,6 +99,7 @@ picker in `xigma-app`'s text-properties panel would fetch to know what's availab
 [
   {
     "name": "Inter",
+    "preview": "Inter/Inter.svg",
     "weights": [
       { "weight": 400, "atlas": "Inter/Inter-400/Inter-400-msdf.json", "texture": "Inter/Inter-400/Inter-400-msdf.png" },
       { "weight": 700, "atlas": "Inter/Inter-700/Inter-700-msdf.json", "texture": "Inter/Inter-700/Inter-700-msdf.png" }
@@ -106,12 +107,15 @@ picker in `xigma-app`'s text-properties panel would fetch to know what's availab
   },
   {
     "name": "Inter Italic",
+    "preview": "Inter/Inter-Italic.svg",
     "weights": [
       { "weight": 400, "atlas": "Inter/Inter-400-Italic/Inter-400-Italic-msdf.json", "texture": "Inter/Inter-400-Italic/Inter-400-Italic-msdf.png" }
     ]
   }
 ]
 ```
+
+`preview` (omitted if missing) points at a lightweight, pre-rendered SVG — see the next section.
 
 `name` is a display name, derived from the variant folder name (`<FontName>-<weight>[-Italic]`), not
 a raw slug — italic variants group under their own `"<FontName> Italic"` entry rather than mixing
@@ -121,6 +125,28 @@ from a selected `(name, weight)` to its files without guessing any folder-naming
 `generate_manifest.mjs` asserts both files actually exist before writing them in, so an inconsistent
 bake fails the manifest generation loudly rather than shipping a path that 404s. Regenerate manually
 any time without a bake: `node scripts/generate_manifest.mjs`.
+
+## `scripts/generate_preview_svg.py` — Figma-style picker previews
+
+A font picker showing 1600+ rows can't load a real webfont per row just to render the family name —
+Figma's own picker avoids this by pre-rendering each name as a small SVG built directly from the
+font's glyph outlines (confirmed by inspecting its DOM: `svg-container font_preview--scaledFontPreview`,
+a real vector snapshot, alongside a `visually_hidden` span with the plain text for accessibility).
+This script does the same thing, via `fontTools`' pens (`SVGPathPen`, `BoundsPen`, `TransformPen`):
+walks the glyphs for a given string, flips the y-axis (font outlines are y-up, SVG is y-down), bakes
+in per-glyph x-advance, and crops the `viewBox` tightly to the actual ink.
+
+```bash
+python scripts/generate_preview_svg.py fonts/Inter/Inter-400/source/Inter-400.ttf "Inter" fonts/Inter/Inter.svg
+python scripts/generate_preview_svg.py fonts/Inter/Inter-400-Italic/source/Inter-400-Italic.ttf "Inter Italic" fonts/Inter/Inter-Italic.svg
+```
+
+One SVG per family/style is enough — unlike the atlas (genuinely different outlines per weight),
+a name preview only needs one representative weight to be recognizable in a picker row, so this
+renders from the Regular/400 static TTF regardless of how many weights are actually baked.
+`generate_manifest.mjs` picks these up automatically if present (`fonts/<Family>/<name-with-dashes>.svg`)
+and adds a `preview` field to that group's manifest entry — see above. **Not wired into
+`bake_font.sh` yet** — currently a manual step, run once per family/style rather than per bake.
 
 ## `fonts/Inter/Inter-400/` — a real, committed example
 

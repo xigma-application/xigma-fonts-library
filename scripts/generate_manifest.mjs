@@ -7,6 +7,13 @@
  * xigma-app/docs/ROADMAP.md: "manifest/katalog dostępnych fontów (...) do wyboru w panelu
  * właściwości tekstu"). `name` is a display name ("Inter", "Inter Italic"), not a folder slug.
  *
+ * Each group also gets an optional `preview` path if fonts/<Family>/<name-with-dashes>.svg exists
+ * — a lightweight, pre-rendered vector snapshot of the family's own display name in its own
+ * glyph outlines (scripts/generate_preview_svg.py), the same trick Figma's font picker uses to
+ * show 1600+ font rows without loading a real webfont per row. One per family/style is enough
+ * (unlike the atlas, this doesn't need to be per weight) — currently generated manually, not
+ * wired into bake_font.sh.
+ *
  * Usage:
  *   node scripts/generate_manifest.mjs
  */
@@ -70,6 +77,12 @@ function resolveOutputPaths(fontsDir, familyDirName, variantDirName) {
   return { atlas: atlasRelative, texture: textureRelative };
 }
 
+function findPreviewPath(fontsDir, familyDirName, name) {
+  const previewRelative = path.join(familyDirName, `${name.replace(/ /g, '-')}.svg`);
+
+  return fs.existsSync(path.join(fontsDir, previewRelative)) ? previewRelative : undefined;
+}
+
 function buildManifest(fontsDir, variantDirs) {
   const entriesByName = new Map();
 
@@ -79,17 +92,22 @@ function buildManifest(fontsDir, variantDirs) {
     const { atlas, texture } = resolveOutputPaths(fontsDir, familyDirName, variantDirName);
 
     if (!entriesByName.has(name)) {
-      entriesByName.set(name, new Map());
+      entriesByName.set(name, { familyDirName, weightsByValue: new Map() });
     }
 
-    entriesByName.get(name).set(weight, { weight, atlas, texture });
+    entriesByName.get(name).weightsByValue.set(weight, { weight, atlas, texture });
   });
 
   return Array.from(entriesByName.entries())
-    .map(([name, weightsByValue]) => ({
-      name,
-      weights: Array.from(weightsByValue.values()).sort((a, b) => a.weight - b.weight),
-    }))
+    .map(([name, { familyDirName, weightsByValue }]) => {
+      const preview = findPreviewPath(fontsDir, familyDirName, name);
+
+      return {
+        name,
+        ...(preview ? { preview } : {}),
+        weights: Array.from(weightsByValue.values()).sort((a, b) => a.weight - b.weight),
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
