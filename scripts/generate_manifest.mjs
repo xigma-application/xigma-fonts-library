@@ -68,8 +68,10 @@ function resolveWeightPaths(family, weight, italic) {
   return { weight, atlas, texture, baked };
 }
 
+// Matches scripts/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is
+// named after `name` verbatim (spaces and all), not dash-replaced.
 function resolvePreviewPath(family, name) {
-  return toManifestPath(family, `${name.replace(/ /g, '-')}.svg`);
+  return toManifestPath(family, `${name}.svg`);
 }
 
 function buildManifest(catalog) {

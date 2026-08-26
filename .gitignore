@@ -11,3 +11,12 @@ node_modules/
 fonts/*/*/*-msdf.json
 fonts/*/*/*-msdf.png
 fonts/*/*/source/
+
+# Preview SVGs (fonts/*/*.svg) are NOT ignored, unlike the atlas/source above — they're
+# deliberately committed for the full catalog (scripts/generate_all_previews.mjs), ~33MB total,
+# nowhere near the atlas/source scale. A picker needs every row's preview at once, unlike an atlas
+# which is only needed for the one font actually selected — see README.
+
+# scripts/serve.mjs's local cache of downloaded Google Fonts variable-font sources, so baking a
+# second weight of an already-seen family doesn't re-download it.
+.cache/

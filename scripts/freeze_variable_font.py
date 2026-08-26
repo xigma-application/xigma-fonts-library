@@ -44,6 +44,22 @@ def freeze_variable_font(input_path: Path, output_path: Path, axes: dict[str, fl
     if "fvar" not in font:
         raise ValueError(f"{input_path} has no 'fvar' table — it isn't a variable font")
 
+    # Not every variable font has every axis (Roboto has wdth/wght but no opsz, for example) —
+    # drop pins for axes this particular font doesn't have rather than failing. Safe here because
+    # our only caller passes house-style defaults (e.g. opsz=14) blanket across arbitrary fonts,
+    # not axes it's relying on being applied; a dropped pin just means "use this font's own
+    # default" for that axis, printed so it's visible rather than silent.
+    available_tags = {a.axisTag for a in font["fvar"].axes}
+    dropped_tags = set(axes) - available_tags
+    axes = {tag: value for tag, value in axes.items() if tag in available_tags}
+
+    if dropped_tags:
+        print(
+            f"note: {input_path.name} has no {', '.join(sorted(dropped_tags))} axis — "
+            f"ignoring those pin(s), available axes: {', '.join(sorted(available_tags))}",
+            file=sys.stderr,
+        )
+
     instancer.instantiateVariableFont(font, axes, inplace=True)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

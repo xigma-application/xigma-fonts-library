@@ -151,16 +151,76 @@ walks the glyphs for a given string, flips the y-axis (font outlines are y-up, S
 in per-glyph x-advance, and crops the `viewBox` tightly to the actual ink.
 
 ```bash
-python scripts/generate_preview_svg.py fonts/Inter/Inter-400/source/Inter-400.ttf "Inter" fonts/Inter/Inter.svg
-python scripts/generate_preview_svg.py fonts/Inter/Inter-400-Italic/source/Inter-400-Italic.ttf "Inter Italic" fonts/Inter/Inter-Italic.svg
+python scripts/generate_preview_svg.py fonts/Inter/Inter-400/source/Inter-400.ttf "Inter" "fonts/Inter/Inter.svg"
+python scripts/generate_preview_svg.py fonts/Inter/Inter-400-Italic/source/Inter-400-Italic.ttf "Inter Italic" "fonts/Inter/Inter Italic.svg"
 ```
 
 One SVG per family/style is enough — unlike the atlas (genuinely different outlines per weight),
-a name preview only needs one representative weight to be recognizable in a picker row, so this
-renders from the Regular/400 static TTF regardless of how many weights are actually baked.
-`generate_manifest.mjs` picks these up automatically if present (`fonts/<Family>/<name-with-dashes>.svg`)
-and adds a `preview` field to that group's manifest entry — see above. **Not wired into
-`bake_font.sh` yet** — currently a manual step, run once per family/style rather than per bake.
+a name preview only needs one representative weight to be recognizable in a picker row. Output is
+named after the display name verbatim, spaces and all (`fonts/<Family>/<name>.svg` — e.g.
+`fonts/Advent Pro/Advent Pro Italic.svg`), which `generate_manifest.mjs` picks up automatically and
+adds as that group's `preview` field — see above.
+
+## `scripts/generate_all_previews.mjs` — every font in the catalog, not just Inter
+
+Runs the previous script for all 2292 `data/google-fonts-catalog.json` entries at once — a picker
+needs every row's preview available up front (unlike the atlas, which is only ever needed for the
+one font actually selected), so unlike the atlas this can't be left to bake-on-miss.
+
+Its font source is deliberately **not** `scripts/lib/googleFontsSource.mjs` (the google/fonts
+GitHub repo, used for on-demand atlas baking below) — it uses Google's own CSS2 API instead
+(`fonts.googleapis.com/css2?family=<Family>:wght@400`), spoofing an old-browser `User-Agent` to get
+a plain `.ttf` back instead of `.woff2`. Two real advantages this ended up depending on: it's
+already instanced to Regular/400 server-side (no `fontTools` freezing step needed at all for a
+preview), and it works uniformly for **static-only families** too, which have no `[...]` variable
+font for `googleFontsSource.mjs` to find — roughly half the catalog, it turns out. It's also not
+subject to GitHub's 60-req/hour unauthenticated API limit, which the per-family Contents-API
+lookups in `googleFontsSource.mjs` hit almost immediately during a full-catalog run (confirmed
+directly: `x-ratelimit-remaining: 0` after ~90 lookups) — CSS2/gstatic is the actual font-serving
+CDN, built for exactly this kind of volume.
+
+```bash
+node scripts/generate_all_previews.mjs
+```
+
+Skips any entry that already has a preview on disk, so it's safe to re-run after the catalog
+changes. Continues past a single entry's failure (logged, not silent) rather than aborting the
+whole run — real result from the full catalog: **2255 generated, 21 already present, 16 failed**
+(98–99% coverage). Every failure is an explainable edge case, not a bug: fonts in a non-Latin
+script with no glyphs to render their own Latin-alphabet name (Khmer, Noto Serif Myanmar, Noto
+*Emoji, Karla Tamil *, ...), plus a handful where Google's CSS2 API doesn't serve a plain `400`
+for that specific family. Failure details land in `.cache/preview-failures.json` (gitignored).
+
+## `scripts/serve.mjs` — local dev server, bakes atlases on demand
+
+This repo is a local sandbox, not something meant to run on a server (see "What's committed vs.
+generated locally" below) — so instead of a CDN + queue + lock-based bake-on-demand backend, this
+is the single-process local equivalent: "if it's not there, bake it; if it is, serve it
+immediately." One developer, requests handled one at a time, nothing to deduplicate.
+
+```bash
+node scripts/serve.mjs         # http://localhost:8787
+```
+
+| Route | Behavior |
+| --- | --- |
+| `GET /fonts/manifest.json` | Regenerated fresh on every request |
+| `GET /fonts/<Family>/<Family>-<weight>[-Italic]/<...>-msdf.json\|png` | Served if on disk; otherwise baked (full pipeline: freeze + MSDF) then served |
+| `GET /fonts/<Family>/<name>.svg` | Served if on disk; otherwise a preview is generated (reuses an already-baked static TTF for that family/style if one exists, else freezes a fresh Regular/400 instance) then served |
+
+Unlike the batch preview script above, on-demand **atlas** baking needs the actual variable font to
+freeze an arbitrary requested weight from — for that, `scripts/lib/googleFontsSource.mjs` resolves
+and downloads it from the google/fonts GitHub repo (not Google's CSS2 API, which only ever serves
+pre-instanced weights, not the raw variable font instancing needs). Downloads are cached under
+`.cache/` (gitignored) so a second weight of an already-seen family doesn't re-fetch it. A
+family that ships only static per-weight files (no `[...]` variable font) fails with a clear error
+rather than a silent 404 — on-demand *atlas* baking doesn't have the CSS2-API escape hatch the
+preview script does, since it needs the freezable variable font, not a pre-instanced one.
+
+Not every variable font shares the same axes — `Roboto[wdth,wght].ttf` has no `opsz` axis, for
+example, unlike Inter. `scripts/freeze_variable_font.py` now drops a pin for an axis the font
+doesn't have (printing a note to stderr) instead of crashing, so the server's blanket `opsz=14`
+convention pin doesn't break every family that lacks that axis.
 
 ## What's committed vs. generated locally
 
@@ -174,24 +234,28 @@ wherever they want the result to end up:
 | --- | --- |
 | `data/google-fonts-catalog.json` (what *could* be offered) | `<variant>-msdf.json` / `.png` (the atlas) |
 | `charset.txt` (the character-set decision, per baked variant) | `source/` (frozen static TTF + `OFL.txt`) |
-| `manifest.json` (catalog merged with what's *actually* baked) | |
-| `<Family>.svg` / `<Family>-Italic.svg` (picker previews) | |
+| `manifest.json` (catalog merged with what's *actually* baked) | `.cache/` (downloaded sources, frozen preview instances) |
+| `<Family>/<name>.svg` — **all 2276 of them**, full catalog | |
 
 `fonts/manifest.json`'s `atlas`/`texture`/`preview` paths are always present, for every entry — see
-previous section for why (deterministic, convention-based, not conditional on a local bake) — with
-`baked` as the per-weight signal for whether that path is a guaranteed hit today. A consumer runs
-`scripts/bake_font.sh` (or their own CI) to actually materialize a given font, into whatever storage
-they've chosen — local disk for dev, a CDN for production — then re-runs `generate_manifest.mjs`,
-which flips `baked` to `true` once it finds the files on disk. Preview SVGs are the one piece of
-this repo's own local bake output that stays committed (a few KB each, vs. hundreds of KB for an
-atlas) — a picker can show a real name preview even before the heavy atlas for that font exists
-anywhere, for the handful of fonts (currently just Inter) that have one generated.
+the catalog/manifest section above for why (deterministic, convention-based, not conditional on a
+local bake) — with `baked` as the per-weight signal for whether an atlas path is a guaranteed hit
+today. A consumer runs `scripts/bake_font.sh` (or `scripts/serve.mjs`'s bake-on-miss, or their own
+CI) to actually materialize a given atlas, into whatever storage they've chosen — local disk for
+dev, a CDN for production — then re-runs `generate_manifest.mjs`, which flips `baked` to `true` once
+it finds the files on disk.
 
-**Sizing, for why this matters**: our own baked Inter (18 variants, this repo's real example) averages
-~760 KB/variant (source TTF + atlas json + png). Google Fonts' own metadata
-(`fonts.google.com/metadata/fonts`) lists 1946 families averaging 4.04 styles each — baking
-everything at that rate would be **~6 GB**. `fonts/Inter/` itself is 14 MB on disk right now but only
-~84 KB of that (`charset.txt`×18 + `manifest.json` + 2 preview SVGs) is actually tracked in git.
+Preview SVGs are the one piece of this repo's own bake output that's committed for the **whole**
+catalog, not gitignored like atlas/source — a picker needs every row's preview at once (unlike an
+atlas, only ever needed for the one font actually selected), so unlike the atlas this genuinely
+can't be deferred to "bake it somewhere later." 33MB total across all 2276 generated previews is a
+completely different scale problem than the atlas/source GB figures below.
+
+**Sizing, for why the atlas/source split matters**: our own baked Inter (18 variants, this repo's
+real worked example) averages ~760 KB/variant (source TTF + atlas json + png). Google Fonts' own
+metadata (`fonts.google.com/metadata/fonts`) lists 1946 families averaging 4.04 styles each — baking
+every atlas at that rate would be **~6 GB**, which is exactly why atlas/source stay gitignored while
+previews (a completely different, much smaller order of magnitude) don't.
 
 ## `fonts/Inter/Inter-400/` — a real, worked example
 
@@ -206,13 +270,16 @@ a local, gitignored artifact of having run the pipeline, same as any other consu
 
 ## Not built yet
 
-- On-demand TTF download from a public source (Google Fonts, etc.) — variant baking currently takes
-  a local variable-font path.
+- On-demand TTF download and bake-on-miss atlas generation **are** built now (`scripts/serve.mjs`)
+  — but only for variable-font families; a family that ships only static per-weight files isn't
+  supported by atlas baking yet (the preview script's Google CSS2-API path doesn't carry over,
+  since atlas baking needs a freezable variable font, not a pre-instanced weight).
 - Actually publishing baked output anywhere (CDN/hosting) — bake output is local-only right now;
   "gitignored" just means it isn't shipped via *this* repo, not that it's shipped anywhere else yet.
-- A real "bake on first request, cache on CDN forever" flow for the long tail of fonts beyond
-  whatever curated set gets pre-baked — needs a backend/job runner, which is out of scope for this
-  repo (a static generator) as it stands today.
+- A real "bake on first request, cache on CDN forever" flow for **production** (multiple
+  concurrent users, dedup/locking so the same font isn't baked twice at once) — `scripts/serve.mjs`
+  is the single-developer local equivalent, deliberately without any of that, per README's earlier
+  "I need this locally, I'm probably never putting this on a server" scoping decision.
 
 ## Related repos
 
