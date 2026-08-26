@@ -1,0 +1,18 @@
+{
+  "name": "xigma-fonts-library",
+  "version": "1.0.0",
+  "description": "Standalone MSDF font-atlas generation pipeline for the xigma design-tool family",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "bake": "scripts/bake_font.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xigma-application/xigma-fonts-library.git"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "msdf-bmfont-xml": "^2.8.0"
+  }
+}
