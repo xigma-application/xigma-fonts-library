@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
  * Scans fonts/<FontName>/<FontName>-<weight>[-Italic]/ and writes fonts/manifest.json — the list
- * of available font groups (family, or family+italic as its own entry) with their weights, for
- * xigma-app's text-properties panel to fetch and populate a font picker from (Etap 9 of
+ * of available font groups (family, or family+italic as its own entry), each weight carrying the
+ * actual atlas/texture paths (relative to fonts/), for xigma-app's text-properties panel to fetch
+ * and populate a font picker from without guessing any folder-naming convention itself (Etap 9 of
  * xigma-app/docs/ROADMAP.md: "manifest/katalog dostępnych fontów (...) do wyboru w panelu
- * właściwości tekstu"). Names are display names ("Inter", "Inter Italic"), not folder slugs.
+ * właściwości tekstu"). `name` is a display name ("Inter", "Inter Italic"), not a folder slug.
  *
  * Usage:
  *   node scripts/generate_manifest.mjs
@@ -27,10 +28,15 @@ function listDirs(dirPath) {
     .map((entry) => entry.name);
 }
 
-function findVariantDirNames(fontsDir) {
-  const familyNames = listDirs(fontsDir);
+function findVariantDirs(fontsDir) {
+  const familyDirNames = listDirs(fontsDir);
 
-  return familyNames.flatMap((familyName) => listDirs(path.join(fontsDir, familyName)));
+  return familyDirNames.flatMap((familyDirName) =>
+    listDirs(path.join(fontsDir, familyDirName)).map((variantDirName) => ({
+      familyDirName,
+      variantDirName,
+    })),
+  );
 }
 
 function parseVariantDirName(variantDirName) {
@@ -47,28 +53,49 @@ function parseVariantDirName(variantDirName) {
   return { family, weight: Number(weight), italic: Boolean(italicSuffix) };
 }
 
-function buildManifest(variantDirNames) {
-  const weightsByName = new Map();
+// bake_font.sh/bake_atlas.cjs always name outputs `${variantDirName}-msdf.{json,png}` inside the
+// variant's own dir — asserted here (not just assumed) so an inconsistent bake fails loudly
+// instead of shipping a manifest with paths that don't resolve.
+function resolveOutputPaths(fontsDir, familyDirName, variantDirName) {
+  const baseName = `${variantDirName}-msdf`;
+  const atlasRelative = path.join(familyDirName, variantDirName, `${baseName}.json`);
+  const textureRelative = path.join(familyDirName, variantDirName, `${baseName}.png`);
 
-  variantDirNames.forEach((variantDirName) => {
-    const { family, weight, italic } = parseVariantDirName(variantDirName);
-    const name = italic ? `${family} Italic` : family;
-
-    if (!weightsByName.has(name)) {
-      weightsByName.set(name, new Set());
+  [atlasRelative, textureRelative].forEach((relativePath) => {
+    if (!fs.existsSync(path.join(fontsDir, relativePath))) {
+      throw new Error(`expected baked output missing: fonts/${relativePath}`);
     }
-
-    weightsByName.get(name).add(weight);
   });
 
-  return Array.from(weightsByName.entries())
-    .map(([name, weights]) => ({ name, weights: Array.from(weights).sort((a, b) => a - b) }))
+  return { atlas: atlasRelative, texture: textureRelative };
+}
+
+function buildManifest(fontsDir, variantDirs) {
+  const entriesByName = new Map();
+
+  variantDirs.forEach(({ familyDirName, variantDirName }) => {
+    const { family, weight, italic } = parseVariantDirName(variantDirName);
+    const name = italic ? `${family} Italic` : family;
+    const { atlas, texture } = resolveOutputPaths(fontsDir, familyDirName, variantDirName);
+
+    if (!entriesByName.has(name)) {
+      entriesByName.set(name, new Map());
+    }
+
+    entriesByName.get(name).set(weight, { weight, atlas, texture });
+  });
+
+  return Array.from(entriesByName.entries())
+    .map(([name, weightsByValue]) => ({
+      name,
+      weights: Array.from(weightsByValue.values()).sort((a, b) => a.weight - b.weight),
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function main() {
-  const variantDirNames = findVariantDirNames(FONTS_DIR);
-  const manifest = buildManifest(variantDirNames);
+  const variantDirs = findVariantDirs(FONTS_DIR);
+  const manifest = buildManifest(FONTS_DIR, variantDirs);
 
   fs.writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`wrote ${manifest.length} font group(s) to ${MANIFEST_PATH}`);

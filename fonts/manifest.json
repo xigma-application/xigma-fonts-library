@@ -2,7 +2,101 @@
   {
     "name": "Inter",
     "weights": [
-      400
+      {
+        "weight": 100,
+        "atlas": "Inter/Inter-100/Inter-100-msdf.json",
+        "texture": "Inter/Inter-100/Inter-100-msdf.png"
+      },
+      {
+        "weight": 200,
+        "atlas": "Inter/Inter-200/Inter-200-msdf.json",
+        "texture": "Inter/Inter-200/Inter-200-msdf.png"
+      },
+      {
+        "weight": 300,
+        "atlas": "Inter/Inter-300/Inter-300-msdf.json",
+        "texture": "Inter/Inter-300/Inter-300-msdf.png"
+      },
+      {
+        "weight": 400,
+        "atlas": "Inter/Inter-400/Inter-400-msdf.json",
+        "texture": "Inter/Inter-400/Inter-400-msdf.png"
+      },
+      {
+        "weight": 500,
+        "atlas": "Inter/Inter-500/Inter-500-msdf.json",
+        "texture": "Inter/Inter-500/Inter-500-msdf.png"
+      },
+      {
+        "weight": 600,
+        "atlas": "Inter/Inter-600/Inter-600-msdf.json",
+        "texture": "Inter/Inter-600/Inter-600-msdf.png"
+      },
+      {
+        "weight": 700,
+        "atlas": "Inter/Inter-700/Inter-700-msdf.json",
+        "texture": "Inter/Inter-700/Inter-700-msdf.png"
+      },
+      {
+        "weight": 800,
+        "atlas": "Inter/Inter-800/Inter-800-msdf.json",
+        "texture": "Inter/Inter-800/Inter-800-msdf.png"
+      },
+      {
+        "weight": 900,
+        "atlas": "Inter/Inter-900/Inter-900-msdf.json",
+        "texture": "Inter/Inter-900/Inter-900-msdf.png"
+      }
+    ]
+  },
+  {
+    "name": "Inter Italic",
+    "weights": [
+      {
+        "weight": 100,
+        "atlas": "Inter/Inter-100-Italic/Inter-100-Italic-msdf.json",
+        "texture": "Inter/Inter-100-Italic/Inter-100-Italic-msdf.png"
+      },
+      {
+        "weight": 200,
+        "atlas": "Inter/Inter-200-Italic/Inter-200-Italic-msdf.json",
+        "texture": "Inter/Inter-200-Italic/Inter-200-Italic-msdf.png"
+      },
+      {
+        "weight": 300,
+        "atlas": "Inter/Inter-300-Italic/Inter-300-Italic-msdf.json",
+        "texture": "Inter/Inter-300-Italic/Inter-300-Italic-msdf.png"
+      },
+      {
+        "weight": 400,
+        "atlas": "Inter/Inter-400-Italic/Inter-400-Italic-msdf.json",
+        "texture": "Inter/Inter-400-Italic/Inter-400-Italic-msdf.png"
+      },
+      {
+        "weight": 500,
+        "atlas": "Inter/Inter-500-Italic/Inter-500-Italic-msdf.json",
+        "texture": "Inter/Inter-500-Italic/Inter-500-Italic-msdf.png"
+      },
+      {
+        "weight": 600,
+        "atlas": "Inter/Inter-600-Italic/Inter-600-Italic-msdf.json",
+        "texture": "Inter/Inter-600-Italic/Inter-600-Italic-msdf.png"
+      },
+      {
+        "weight": 700,
+        "atlas": "Inter/Inter-700-Italic/Inter-700-Italic-msdf.json",
+        "texture": "Inter/Inter-700-Italic/Inter-700-Italic-msdf.png"
+      },
+      {
+        "weight": 800,
+        "atlas": "Inter/Inter-800-Italic/Inter-800-Italic-msdf.json",
+        "texture": "Inter/Inter-800-Italic/Inter-800-Italic-msdf.png"
+      },
+      {
+        "weight": 900,
+        "atlas": "Inter/Inter-900-Italic/Inter-900-Italic-msdf.json",
+        "texture": "Inter/Inter-900-Italic/Inter-900-Italic-msdf.png"
+      }
     ]
   }
 ]

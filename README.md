@@ -97,17 +97,30 @@ picker in `xigma-app`'s text-properties panel would fetch to know what's availab
 
 ```json
 [
-  { "name": "Inter", "weights": [400, 700] },
-  { "name": "Inter Italic", "weights": [400] }
+  {
+    "name": "Inter",
+    "weights": [
+      { "weight": 400, "atlas": "Inter/Inter-400/Inter-400-msdf.json", "texture": "Inter/Inter-400/Inter-400-msdf.png" },
+      { "weight": 700, "atlas": "Inter/Inter-700/Inter-700-msdf.json", "texture": "Inter/Inter-700/Inter-700-msdf.png" }
+    ]
+  },
+  {
+    "name": "Inter Italic",
+    "weights": [
+      { "weight": 400, "atlas": "Inter/Inter-400-Italic/Inter-400-Italic-msdf.json", "texture": "Inter/Inter-400-Italic/Inter-400-Italic-msdf.png" }
+    ]
+  }
 ]
 ```
 
 `name` is a display name, derived from the variant folder name (`<FontName>-<weight>[-Italic]`), not
 a raw slug — italic variants group under their own `"<FontName> Italic"` entry rather than mixing
-into the roman family's `weights`, matching how a family/style picker would present them. Regenerate
-manually any time without a bake: `node scripts/generate_manifest.mjs`. **Not included yet**: file
-paths/URLs per weight — the manifest is name+weights only, per what was actually asked for; wiring in
-where each weight's `atlas.json`/`.png` actually lives is a follow-up once a consumer needs it.
+into the roman family's `weights`, matching how a family/style picker would present them. Each weight
+entry carries its own `atlas`/`texture` paths (relative to `fonts/`) so a consumer can go straight
+from a selected `(name, weight)` to its files without guessing any folder-naming convention itself —
+`generate_manifest.mjs` asserts both files actually exist before writing them in, so an inconsistent
+bake fails the manifest generation loudly rather than shipping a path that 404s. Regenerate manually
+any time without a bake: `node scripts/generate_manifest.mjs`.
 
 ## `fonts/Inter/Inter-400/` — a real, committed example
 
