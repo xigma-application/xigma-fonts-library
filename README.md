@@ -38,9 +38,9 @@ directly, and font size/line-height/letter-spacing/paragraph-spacing are pure re
 parameters that never require a re-bake (the atlas is a resolution-independent distance field; text
 geometry is scaled and laid out from glyph metrics at draw time). What genuinely needs its own bake
 is a different **weight or style** — those are different glyph outlines, not a transform of an
-existing one. So the baking unit is font × weight × style, e.g. `inter-400`, `inter-700`,
-`inter-400-italic` — each with its own `charset.txt`, its own frozen static TTF, and its own
-`atlas.png`/`atlas.json`.
+existing one. So the baking unit is font × weight × style, e.g. `Inter-400`, `Inter-700`,
+`Inter-400-Italic` — each with its own `charset.txt`, its own frozen static TTF, and its own
+`atlas.png`/`atlas.json`, grouped under its font family: `fonts/<FontName>/<FontName>-<variant>/`.
 
 ## Pipeline
 
@@ -66,29 +66,29 @@ npm install
 
 # a variant dir needs a charset.txt before baking — the character set is a per-variant decision,
 # not auto-generated
-mkdir -p fonts/inter-700
-cp fonts/inter-400/charset.txt fonts/inter-700/charset.txt   # or your own
+mkdir -p fonts/Inter/Inter-700
+cp fonts/Inter/Inter-400/charset.txt fonts/Inter/Inter-700/charset.txt   # or your own
 
-scripts/bake_font.sh fonts/inter-700 /path/to/Inter[opsz,wght].ttf wght=700 opsz=14
+scripts/bake_font.sh fonts/Inter/Inter-700 /path/to/Inter[opsz,wght].ttf wght=700 opsz=14
 ```
 
-Produces, per variant:
+Produces, per variant — grouped `<FontName>/<FontName>-<variant>/`:
 
 ```
-fonts/inter-700/
+fonts/Inter/Inter-700/
   charset.txt              # the character-set decision (committed)
   source/
-    inter-700.ttf           # frozen static instance (committed — see note below)
+    Inter-700.ttf           # frozen static instance (committed — see note below)
     OFL.txt                 # font license, carried alongside the source TTF
-  inter-700-msdf.json        # BMFont metadata (glyph metrics, atlas layout)
-  inter-700-msdf.png         # the MSDF atlas texture
+  Inter-700-msdf.json        # BMFont metadata (glyph metrics, atlas layout)
+  Inter-700-msdf.png         # the MSDF atlas texture
 ```
 
 Each step is also independently runnable — `python scripts/freeze_variable_font.py <in> <out>
 <axis=value>...` and `node scripts/bake_atlas.cjs --font <ttf> --charset <file> --out-dir <dir>
 --name <name>` — see each file's own docstring/`--help`.
 
-## `fonts/inter-400/` — a real, committed example
+## `fonts/Inter/Inter-400/` — a real, committed example
 
 Baked end-to-end through this exact pipeline from the real Inter variable font
 (`ofl/inter/Inter[opsz,wght].ttf`, google/fonts) at `wght=400 opsz=14`, using the same

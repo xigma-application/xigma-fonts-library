@@ -8,8 +8,9 @@
 #   scripts/bake_font.sh <variant-dir> <variable-font.ttf> <axis=value>...
 #
 # <variant-dir> must already contain a charset.txt (the character-set decision for this variant).
+# Variants are grouped by font family: fonts/<FontName>/<FontName>-<variant>/.
 # Example:
-#   scripts/bake_font.sh fonts/inter-400 /path/to/Inter[opsz,wght].ttf wght=400 opsz=14
+#   scripts/bake_font.sh fonts/Inter/Inter-400 /path/to/Inter[opsz,wght].ttf wght=400 opsz=14
 
 set -euo pipefail
 
