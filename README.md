@@ -31,19 +31,47 @@ In short: **`xigma-fonts-library` is the standalone MSDF font-atlas pipeline** �
 definitions in, `atlas.png` + `atlas.json` per font out, ready to publish wherever `xigma-app` (or
 any future consumer) fetches font atlases from.
 
+## Baking unit: one static instance per (font, weight, style)
+
+MSDF baking (`msdf-bmfont-xml`) needs a static TTF — it can't consume a variable font's axes
+directly, and font size/line-height/letter-spacing/paragraph-spacing are pure render-time/layout
+parameters that never require a re-bake (the atlas is a resolution-independent distance field; text
+geometry is scaled and laid out from glyph metrics at draw time). What genuinely needs its own bake
+is a different **weight or style** — those are different glyph outlines, not a transform of an
+existing one. So the baking unit is font × weight × style, e.g. `inter-400`, `inter-700`,
+`inter-400-italic` — each with its own `charset.txt`, its own frozen static TTF, and its own
+`atlas.png`/`atlas.json`.
+
+## `scripts/freeze_variable_font.py`
+
+The first generalized pipeline step: freezes a variable-font TTF to a static weight/style instance
+via `fontTools.varLib.instancer`, the same mechanism `xigma-app` used once, manually, to produce its
+committed `Inter-Regular.ttf` (`wght=400 opsz=14`) before running its own `generate:font-atlas`.
+Generalized here to arbitrary axis pins so it can produce any of the per-variant instances above.
+
+```bash
+pip install -r requirements.txt
+python scripts/freeze_variable_font.py <input-variable.ttf> <output.ttf> wght=700
+python scripts/freeze_variable_font.py <input-variable.ttf> <output.ttf> wght=400 opsz=14 ital=1
+```
+
+Verified end-to-end against the real Inter variable font (`ofl/inter/Inter[opsz,wght].ttf` from
+google/fonts): freezing to `wght=700 opsz=14` produces a TTF with no `fvar` table and
+`OS/2.usWeightClass == 700`, ready to feed into `msdf-bmfont-xml`.
+
 ## Current state
 
-This repo is a fresh scaffold — no generator code has been ported over yet. The reference
-implementation to port/generalize lives in `xigma-app`:
+Beyond the freezing script above, no other generator code has been ported over yet. The reference
+implementation to port/generalize next lives in `xigma-app`:
 
 - `xigma-app/package.json`'s `generate:font-atlas` script — the current `msdf-bmfont-xml` CLI
   invocation (`fontSize=64`, `distanceRange=6`, `padding=2`).
 - `xigma-app/src/assets/fonts/inter/` — the current single-font example: `inter-msdf.charset.txt`
-  (the character set), `source/Inter-Regular.ttf` (statically extracted from the variable font via
-  `fonttools varLib.instancer`, `wght=400 opsz=14`), and the generated `inter-msdf.json`/
-  `inter-msdf.png` outputs.
+  (the character set) and the generated `inter-msdf.json`/`inter-msdf.png` outputs.
 - `xigma-app/docs/ROADMAP.md`, Etap 7 (MSDF rendering, tuning fontSize/distanceRange/mipmaps) and
   Etap 9 (the multi-font/CDN/this-repo plan) — the full "why" behind every generation parameter.
+- On-demand TTF download from a public source (e.g. Google Fonts) — not built yet; the freeze script
+  above currently takes a local input path.
 
 ## Related repos
 
