@@ -3,3 +3,11 @@ __pycache__/
 .venv/
 venv/
 node_modules/
+
+# Generated baking output — heavy, and would scale to several GB across the full font catalog
+# (see README "What's committed vs. generated locally"). Each deployment bakes these itself
+# (locally, or in CI to publish to a CDN); only the recipe (charset.txt) and the small,
+# git-friendly manifest.json/preview SVGs are committed.
+fonts/*/*/*-msdf.json
+fonts/*/*/*-msdf.png
+fonts/*/*/source/

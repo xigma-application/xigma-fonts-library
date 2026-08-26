@@ -148,24 +148,53 @@ renders from the Regular/400 static TTF regardless of how many weights are actua
 and adds a `preview` field to that group's manifest entry — see above. **Not wired into
 `bake_font.sh` yet** — currently a manual step, run once per family/style rather than per bake.
 
-## `fonts/Inter/Inter-400/` — a real, committed example
+## What's committed vs. generated locally
+
+Baking everything Google Fonts offers would be several GB (see sizing note below) — nowhere close
+to git-shippable, and there's no single right answer for where the actual atlas files should live
+(a project's own CDN, a local cache for offline dev, S3, whatever). So this repo draws the line at:
+generator + **recipe** in git, generated **output** gitignored — each consumer bakes it themselves,
+wherever they want the result to end up:
+
+| Committed | Gitignored (baked locally, per consumer) |
+| --- | --- |
+| `charset.txt` (the character-set decision) | `<variant>-msdf.json` / `.png` (the atlas) |
+| `manifest.json` (what's available + where, once baked) | `source/` (frozen static TTF + `OFL.txt`) |
+| `<Family>.svg` / `<Family>-Italic.svg` (picker previews) | |
+
+`fonts/manifest.json` still lists `atlas`/`texture` paths as if they exist — that's intentional: the
+manifest is the **catalog of what this pipeline can produce**, not a guarantee of what's currently on
+disk in any given checkout. A consumer runs `scripts/bake_font.sh` (or their own CI) to materialize
+what the manifest promises, into whatever storage they've chosen — local disk for dev, a CDN for
+production. Preview SVGs stay committed regardless (a few KB each, and a picker can show a real name
+preview even before the heavy atlas for that font has been baked anywhere).
+
+**Sizing, for why this matters**: our own baked Inter (18 variants, this repo's real example) averages
+~760 KB/variant (source TTF + atlas json + png). Google Fonts' own metadata
+(`fonts.google.com/metadata/fonts`) lists 1946 families averaging 4.04 styles each — baking
+everything at that rate would be **~6 GB**. `fonts/Inter/` itself is 14 MB on disk right now but only
+~84 KB of that (`charset.txt`×18 + `manifest.json` + 2 preview SVGs) is actually tracked in git.
+
+## `fonts/Inter/Inter-400/` — a real, worked example
 
 Baked end-to-end through this exact pipeline from the real Inter variable font
 (`ofl/inter/Inter[opsz,wght].ttf`, google/fonts) at `wght=400 opsz=14`, using the same
 `inter-msdf.charset.txt` content as `xigma-app`. Cross-checked against `xigma-app`'s own committed
 `inter-msdf.json`: `scaleW`/`scaleH` (507×494) and `lineHeight`/`base` (77/62) come out identical,
-confirming this pipeline reproduces `xigma-app`'s existing, already-verified output.
-
-**Note on committing binaries**: this repo is meant as a local sandbox for baking fonts, not (yet)
-a "no binaries in git" pipeline — so `source/*.ttf` and the baked atlas are committed here, unlike
-the more automated on-demand-download version the ROADMAP's Etap 9 eventually envisions. Revisit
-this once the repo moves past local experimentation.
+confirming this pipeline reproduces `xigma-app`'s existing, already-verified output. All 18 Inter
+variants (100–900 × Roman/Italic) are baked and present on disk in this checkout, but per the policy
+above, only their `charset.txt` files are actually tracked by git — the atlas/source files here are
+a local, gitignored artifact of having run the pipeline, same as any other consumer's would be.
 
 ## Not built yet
 
 - On-demand TTF download from a public source (Google Fonts, etc.) — variant baking currently takes
   a local variable-font path.
-- Publishing atlases anywhere (CDN/hosting) — outputs stay local to this repo for now.
+- Actually publishing baked output anywhere (CDN/hosting) — bake output is local-only right now;
+  "gitignored" just means it isn't shipped via *this* repo, not that it's shipped anywhere else yet.
+- A real "bake on first request, cache on CDN forever" flow for the long tail of fonts beyond
+  whatever curated set gets pre-baked — needs a backend/job runner, which is out of scope for this
+  repo (a static generator) as it stands today.
 
 ## Related repos
 
