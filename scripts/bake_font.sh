@@ -40,3 +40,5 @@ node "$SCRIPT_DIR/bake_atlas.cjs" \
   --charset "$VARIANT_DIR/charset.txt" \
   --out-dir "$VARIANT_DIR" \
   --name "${NAME}-msdf"
+
+node "$SCRIPT_DIR/generate_manifest.mjs"
