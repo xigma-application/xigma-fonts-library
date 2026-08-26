@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /**
- * Scans fonts/<FontName>/<FontName>-<weight>[-Italic]/ and writes fonts/manifest.json — the list
- * of available font groups (family, or family+italic as its own entry), each weight carrying the
- * actual atlas/texture paths (relative to fonts/), for xigma-app's text-properties panel to fetch
- * and populate a font picker from without guessing any folder-naming convention itself (Etap 9 of
- * xigma-app/docs/ROADMAP.md: "manifest/katalog dostępnych fontów (...) do wyboru w panelu
- * właściwości tekstu"). `name` is a display name ("Inter", "Inter Italic"), not a folder slug.
+ * Writes fonts/manifest.json from data/google-fonts-catalog.json (the full "what could we offer"
+ * list — 2292 entries, fetched via scripts/fetch_google_fonts_catalog.mjs).
  *
- * Each group also gets an optional `preview` path if fonts/<Family>/<name-with-dashes>.svg exists
- * — a lightweight, pre-rendered vector snapshot of the family's own display name in its own
- * glyph outlines (scripts/generate_preview_svg.py), the same trick Figma's font picker uses to
- * show 1600+ font rows without loading a real webfont per row. One per family/style is enough
- * (unlike the atlas, this doesn't need to be per weight) — currently generated manually, not
- * wired into bake_font.sh.
+ * Every entry gets `preview`/`atlas`/`texture` paths, always — computed from this repo's own
+ * naming convention (`fonts/<Family>/<Family>-<weight>[-Italic]/...`), the same convention
+ * `scripts/bake_font.sh` writes to. These are deterministic, not conditional: a consumer always
+ * knows the URL/path a font *would* live at, whether or not it's been baked in this checkout yet
+ * — no branching on "does this entry have an atlas field." Each weight also carries `baked: bool`,
+ * set by actually checking the file exists on disk right now, so a consumer can tell a guaranteed
+ * hit from a path that needs baking-on-demand first (see README's "bake once, cache on CDN forever"
+ * discussion) without doing a network round-trip just to find out.
+ *
+ * This is the "manifest/katalog dostępnych fontów" from xigma-app/docs/ROADMAP.md Etap 9 — what a
+ * font picker in xigma-app's text-properties panel would fetch to know what's offerable.
  *
  * Usage:
  *   node scripts/generate_manifest.mjs
@@ -25,98 +26,71 @@ import { fileURLToPath } from 'node:url';
 // Resolved relative to this file, not process.cwd() — bake_font.sh may invoke this from anywhere.
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
+const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
 const MANIFEST_PATH = path.join(FONTS_DIR, 'manifest.json');
-const VARIANT_NAME_PATTERN = /^(.+)-(\d{1,4})(-Italic)?$/;
 
-function listDirs(dirPath) {
-  return fs
-    .readdirSync(dirPath, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-}
+// Explicit locale + base sensitivity: case and accents don't affect ordering, and it's
+// deterministic regardless of the runtime's default ICU locale, unlike a bare a.localeCompare(b).
+const alphabetically = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' });
 
-function findVariantDirs(fontsDir) {
-  const familyDirNames = listDirs(fontsDir);
-
-  return familyDirNames.flatMap((familyDirName) =>
-    listDirs(path.join(fontsDir, familyDirName)).map((variantDirName) => ({
-      familyDirName,
-      variantDirName,
-    })),
-  );
-}
-
-function parseVariantDirName(variantDirName) {
-  const match = variantDirName.match(VARIANT_NAME_PATTERN);
-
-  if (!match) {
+function loadCatalog() {
+  if (!fs.existsSync(CATALOG_PATH)) {
     throw new Error(
-      `variant folder name doesn't match <FontName>-<weight>[-Italic]: ${variantDirName}`,
+      `${CATALOG_PATH} not found — run scripts/fetch_google_fonts_catalog.mjs first`,
     );
   }
 
-  const [, family, weight, italicSuffix] = match;
-
-  return { family, weight: Number(weight), italic: Boolean(italicSuffix) };
+  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
 }
 
-// bake_font.sh/bake_atlas.cjs always name outputs `${variantDirName}-msdf.{json,png}` inside the
-// variant's own dir — asserted here (not just assumed) so an inconsistent bake fails loudly
-// instead of shipping a manifest with paths that don't resolve.
-function resolveOutputPaths(fontsDir, familyDirName, variantDirName) {
-  const baseName = `${variantDirName}-msdf`;
-  const atlasRelative = path.join(familyDirName, variantDirName, `${baseName}.json`);
-  const textureRelative = path.join(familyDirName, variantDirName, `${baseName}.png`);
-
-  [atlasRelative, textureRelative].forEach((relativePath) => {
-    if (!fs.existsSync(path.join(fontsDir, relativePath))) {
-      throw new Error(`expected baked output missing: fonts/${relativePath}`);
-    }
-  });
-
-  return { atlas: atlasRelative, texture: textureRelative };
+// Paths in the manifest are rooted at "fonts/", not at fonts/manifest.json's own directory — a
+// consumer resolves them against the repo (or wherever fonts/ was published), not against wherever
+// the manifest file itself happens to live.
+function toManifestPath(...segments) {
+  return path.join('fonts', ...segments);
 }
 
-function findPreviewPath(fontsDir, familyDirName, name) {
-  const previewRelative = path.join(familyDirName, `${name.replace(/ /g, '-')}.svg`);
-
-  return fs.existsSync(path.join(fontsDir, previewRelative)) ? previewRelative : undefined;
+// Mirrors the exact convention scripts/bake_font.sh writes to: variant dir name is
+// `<family>-<weight>[-Italic]`, its outputs are `<variant>-msdf.{json,png}` inside it.
+function variantDirName(family, weight, italic) {
+  return `${family}-${weight}${italic ? '-Italic' : ''}`;
 }
 
-function buildManifest(fontsDir, variantDirs) {
-  const entriesByName = new Map();
+function resolveWeightPaths(family, weight, italic) {
+  const variant = variantDirName(family, weight, italic);
+  const baseName = `${variant}-msdf`;
 
-  variantDirs.forEach(({ familyDirName, variantDirName }) => {
-    const { family, weight, italic } = parseVariantDirName(variantDirName);
-    const name = italic ? `${family} Italic` : family;
-    const { atlas, texture } = resolveOutputPaths(fontsDir, familyDirName, variantDirName);
+  const atlas = toManifestPath(family, variant, `${baseName}.json`);
+  const texture = toManifestPath(family, variant, `${baseName}.png`);
+  const baked = fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`))
+    && fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
 
-    if (!entriesByName.has(name)) {
-      entriesByName.set(name, { familyDirName, weightsByValue: new Map() });
-    }
+  return { weight, atlas, texture, baked };
+}
 
-    entriesByName.get(name).weightsByValue.set(weight, { weight, atlas, texture });
-  });
+function resolvePreviewPath(family, name) {
+  return toManifestPath(family, `${name.replace(/ /g, '-')}.svg`);
+}
 
-  return Array.from(entriesByName.entries())
-    .map(([name, { familyDirName, weightsByValue }]) => {
-      const preview = findPreviewPath(fontsDir, familyDirName, name);
-
-      return {
-        name,
-        ...(preview ? { preview } : {}),
-        weights: Array.from(weightsByValue.values()).sort((a, b) => a.weight - b.weight),
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+function buildManifest(catalog) {
+  return catalog
+    .map(({ name, family, italic, weights }) => ({
+      name,
+      preview: resolvePreviewPath(family, name),
+      weights: weights.map((weight) => resolveWeightPaths(family, weight, italic)),
+    }))
+    .sort((a, b) => alphabetically(a.name, b.name));
 }
 
 function main() {
-  const variantDirs = findVariantDirs(FONTS_DIR);
-  const manifest = buildManifest(FONTS_DIR, variantDirs);
+  const catalog = loadCatalog();
+  const manifest = buildManifest(catalog);
+  const bakedCount = manifest.filter((entry) => entry.weights.some((w) => w.baked)).length;
 
   fs.writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(`wrote ${manifest.length} font group(s) to ${MANIFEST_PATH}`);
+  console.log(
+    `wrote ${manifest.length} font group(s) to ${MANIFEST_PATH} (${bakedCount} with at least one baked weight)`,
+  );
 }
 
 main();
