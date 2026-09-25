@@ -94,12 +94,7 @@ async function generateOne(entry) {
 
   const ttfPath = await ensureRegularTtf(entry.family, entry.italic);
 
-  execFileSync('python3', [
-    path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'),
-    ttfPath,
-    entry.name,
-    outputPath,
-  ]);
+  execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'), ttfPath, entry.name, outputPath]);
 
   return 'generated';
 }

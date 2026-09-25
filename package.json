@@ -5,7 +5,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bake": "scripts/bake_font.sh"
+    "bake": "scripts/bake_font.sh",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format:check": "oxfmt --check .",
+    "format:write": "oxfmt"
   },
   "repository": {
     "type": "git",
@@ -14,5 +18,9 @@
   "license": "ISC",
   "dependencies": {
     "msdf-bmfont-xml": "^2.8.0"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0"
   }
 }

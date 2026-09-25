@@ -45,8 +45,7 @@ function ensureCharset(variantDir) {
 
 function isAlreadyBaked(variantDir, variantName) {
   return (
-    fs.existsSync(path.join(variantDir, `${variantName}-msdf.json`)) &&
-    fs.existsSync(path.join(variantDir, `${variantName}-msdf.png`))
+    fs.existsSync(path.join(variantDir, `${variantName}-msdf.json`)) && fs.existsSync(path.join(variantDir, `${variantName}-msdf.png`))
   );
 }
 
@@ -64,10 +63,14 @@ async function bakeOne(family, weight, italic) {
 
   execFileSync('node', [
     path.join(REPO_ROOT, 'scripts', 'bake_atlas.cjs'),
-    '--font', ttfPath,
-    '--charset', path.join(variantDir, 'charset.txt'),
-    '--out-dir', variantDir,
-    '--name', `${variantName}-msdf`,
+    '--font',
+    ttfPath,
+    '--charset',
+    path.join(variantDir, 'charset.txt'),
+    '--out-dir',
+    variantDir,
+    '--name',
+    `${variantName}-msdf`,
   ]);
 
   return 'baked';

@@ -35,8 +35,7 @@ const CACHE_DIR = path.join(REPO_ROOT, '.cache');
 const DEFAULT_CHARSET_PATH = path.join(FONTS_DIR, 'Inter', 'Inter-400', 'charset.txt');
 const DEFAULT_OPSZ = 14; // matches xigma-app's own pin, see README
 
-const ATLAS_PATH_PATTERN =
-  /^([^/]+)\/([^/]+)-(\d{1,4})(-Italic)?\/\2-\3\4-msdf\.(json|png)$/;
+const ATLAS_PATH_PATTERN = /^([^/]+)\/([^/]+)-(\d{1,4})(-Italic)?\/\2-\3\4-msdf\.(json|png)$/;
 // Preview filenames are named after the display name verbatim ("Inter Italic.svg", space —
 // matching scripts/generate_all_previews.mjs), not the dash convention atlas variant dirs use.
 const PREVIEW_PATH_PATTERN = /^([^/]+)\/\1( Italic)?\.svg$/;
@@ -62,17 +61,9 @@ async function bakeVariant(family, weight, italic) {
 
   ensureCharset(variantDir);
 
-  execFileSync(
-    'bash',
-    [
-      path.join(REPO_ROOT, 'scripts', 'bake_font.sh'),
-      variantDir,
-      sourceTtf,
-      `wght=${weight}`,
-      `opsz=${DEFAULT_OPSZ}`,
-    ],
-    { stdio: 'inherit' },
-  );
+  execFileSync('bash', [path.join(REPO_ROOT, 'scripts', 'bake_font.sh'), variantDir, sourceTtf, `wght=${weight}`, `opsz=${DEFAULT_OPSZ}`], {
+    stdio: 'inherit',
+  });
 }
 
 async function bakePreview(family, italic, name) {
@@ -110,12 +101,7 @@ async function bakePreview(family, italic, name) {
 
   const outputPath = path.join(FONTS_DIR, family, `${name}.svg`);
 
-  execFileSync('python3', [
-    path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'),
-    staticTtf,
-    name,
-    outputPath,
-  ]);
+  execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'), staticTtf, name, outputPath]);
 }
 
 function sendFile(res, filePath) {
@@ -216,12 +202,14 @@ async function handleRequest(req, res) {
 function main() {
   const port = Number(process.argv[2]) || 8787;
 
-  http.createServer((req, res) => {
-    handleRequest(req, res);
-  }).listen(port, () => {
-    console.log(`xigma-fonts-library dev server on http://localhost:${port}`);
-    console.log(`  manifest: http://localhost:${port}/fonts/manifest.json`);
-  });
+  http
+    .createServer((req, res) => {
+      handleRequest(req, res);
+    })
+    .listen(port, () => {
+      console.log(`xigma-fonts-library dev server on http://localhost:${port}`);
+      console.log(`  manifest: http://localhost:${port}/fonts/manifest.json`);
+    });
 }
 
 main();

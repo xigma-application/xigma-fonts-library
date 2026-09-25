@@ -35,9 +35,7 @@ const alphabetically = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' 
 
 function loadCatalog() {
   if (!fs.existsSync(CATALOG_PATH)) {
-    throw new Error(
-      `${CATALOG_PATH} not found — run scripts/fetch_google_fonts_catalog.mjs first`,
-    );
+    throw new Error(`${CATALOG_PATH} not found — run scripts/fetch_google_fonts_catalog.mjs first`);
   }
 
   return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
@@ -62,8 +60,9 @@ function resolveWeightPaths(family, weight, italic) {
 
   const atlas = toManifestPath(family, variant, `${baseName}.json`);
   const texture = toManifestPath(family, variant, `${baseName}.png`);
-  const baked = fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`))
-    && fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
+  const baked =
+    fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`)) &&
+    fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
 
   return { weight, atlas, texture, baked };
 }
@@ -90,9 +89,7 @@ function main() {
   const bakedCount = manifest.filter((entry) => entry.weights.some((w) => w.baked)).length;
 
   fs.writeFileSync(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(
-    `wrote ${manifest.length} font group(s) to ${MANIFEST_PATH} (${bakedCount} with at least one baked weight)`,
-  );
+  console.log(`wrote ${manifest.length} font group(s) to ${MANIFEST_PATH} (${bakedCount} with at least one baked weight)`);
 }
 
 main();

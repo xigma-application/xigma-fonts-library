@@ -55,7 +55,7 @@ Two steps, one per language, chained by `scripts/bake_font.sh`:
    TTF, using the same parameters `xigma-app` tuned and verified (`fontSize=64`, `distanceRange=6`,
    `texturePadding=2`, `msdf`/`json`) — see `xigma-app/docs/ROADMAP.md`, Etap 7, for why those exact
    values. Uses the library's programmatic API rather than its CLI, since the CLI always names the
-   output BMFont file after the *input TTF's filename*, ignoring `-o`/`filename` for anything but
+   output BMFont file after the _input TTF's filename_, ignoring `-o`/`filename` for anything but
    the texture page — confirmed against its source (`index.js`); `xigma-app`'s own
    `generate:font-atlas` works around the same quirk with a shell `mv`. This script instead writes
    every output under the name you pass explicitly, no post-hoc renaming needed.
@@ -101,13 +101,13 @@ Two layers, kept deliberately separate:
 - **`fonts/manifest.json`** — `scripts/generate_manifest.mjs` turns that catalog into the manifest.
   Every entry, and every weight, always carries `preview`/`atlas`/`texture` — computed from this
   repo's own naming convention (the same one `bake_font.sh` writes to), not conditional on whether
-  anything's actually been baked in this checkout. A consumer always knows the path a font *would*
+  anything's actually been baked in this checkout. A consumer always knows the path a font _would_
   be at without branching on "does this field exist." Each weight also carries `baked: true/false`,
   checked against disk fresh on every run (then run automatically as `bake_font.sh`'s last step), so
   a consumer can tell a guaranteed hit from a path that needs baking-on-demand first — without a
   network round-trip just to find out. This is the "manifest/katalog dostępnych fontów" from
   `xigma-app/docs/ROADMAP.md` Etap 9 — what a font picker in `xigma-app`'s text-properties panel
-  would fetch to know what's *offerable*, with `baked` distinguishing it from what's *ready right now*.
+  would fetch to know what's _offerable_, with `baked` distinguishing it from what's _ready right now_.
 
 ```json
 [
@@ -115,15 +115,30 @@ Two layers, kept deliberately separate:
     "name": "Inter",
     "preview": "fonts/Inter/Inter.svg",
     "weights": [
-      { "weight": 400, "atlas": "fonts/Inter/Inter-400/Inter-400-msdf.json", "texture": "fonts/Inter/Inter-400/Inter-400-msdf.png", "baked": true },
-      { "weight": 700, "atlas": "fonts/Inter/Inter-700/Inter-700-msdf.json", "texture": "fonts/Inter/Inter-700/Inter-700-msdf.png", "baked": true }
+      {
+        "weight": 400,
+        "atlas": "fonts/Inter/Inter-400/Inter-400-msdf.json",
+        "texture": "fonts/Inter/Inter-400/Inter-400-msdf.png",
+        "baked": true
+      },
+      {
+        "weight": 700,
+        "atlas": "fonts/Inter/Inter-700/Inter-700-msdf.json",
+        "texture": "fonts/Inter/Inter-700/Inter-700-msdf.png",
+        "baked": true
+      }
     ]
   },
   {
     "name": "Roboto",
     "preview": "fonts/Roboto/Roboto.svg",
     "weights": [
-      { "weight": 400, "atlas": "fonts/Roboto/Roboto-400/Roboto-400-msdf.json", "texture": "fonts/Roboto/Roboto-400/Roboto-400-msdf.png", "baked": false }
+      {
+        "weight": 400,
+        "atlas": "fonts/Roboto/Roboto-400/Roboto-400-msdf.json",
+        "texture": "fonts/Roboto/Roboto-400/Roboto-400-msdf.png",
+        "baked": false
+      }
     ]
   }
 ]
@@ -195,7 +210,7 @@ for that specific family. Failure details land in `.cache/preview-failures.json`
 
 Like `generate_all_previews.mjs`, but for the real atlas — every `(family, weight, style)` in
 `data/google-fonts-catalog.json`, not just one representative weight. Source TTF comes from
-`scripts/lib/googleFontsCss.mjs` (Google's CSS2 API again, requesting the *exact* weight instead of
+`scripts/lib/googleFontsCss.mjs` (Google's CSS2 API again, requesting the _exact_ weight instead of
 a fixed 400), which sidesteps `scripts/freeze_variable_font.py` entirely — Google's servers already
 instance it, so this feeds straight into `scripts/bake_atlas.cjs`. Same reasoning as the preview
 script for why this beats `scripts/lib/googleFontsSource.mjs` (GitHub) as a source: no rate limit,
@@ -228,11 +243,11 @@ immediately." One developer, requests handled one at a time, nothing to deduplic
 node scripts/serve.mjs         # http://localhost:8787
 ```
 
-| Route | Behavior |
-| --- | --- |
-| `GET /fonts/manifest.json` | Regenerated fresh on every request |
-| `GET /fonts/<Family>/<Family>-<weight>[-Italic]/<...>-msdf.json\|png` | Served if on disk; otherwise baked (full pipeline: freeze + MSDF) then served |
-| `GET /fonts/<Family>/<name>.svg` | Served if on disk; otherwise a preview is generated (reuses an already-baked static TTF for that family/style if one exists, else freezes a fresh Regular/400 instance) then served |
+| Route                                                                 | Behavior                                                                                                                                                                            |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /fonts/manifest.json`                                            | Regenerated fresh on every request                                                                                                                                                  |
+| `GET /fonts/<Family>/<Family>-<weight>[-Italic]/<...>-msdf.json\|png` | Served if on disk; otherwise baked (full pipeline: freeze + MSDF) then served                                                                                                       |
+| `GET /fonts/<Family>/<name>.svg`                                      | Served if on disk; otherwise a preview is generated (reuses an already-baked static TTF for that family/style if one exists, else freezes a fresh Regular/400 instance) then served |
 
 Unlike the batch preview script above, on-demand **atlas** baking needs the actual variable font to
 freeze an arbitrary requested weight from — for that, `scripts/lib/googleFontsSource.mjs` resolves
@@ -240,7 +255,7 @@ and downloads it from the google/fonts GitHub repo (not Google's CSS2 API, which
 pre-instanced weights, not the raw variable font instancing needs). Downloads are cached under
 `.cache/` (gitignored) so a second weight of an already-seen family doesn't re-fetch it. A
 family that ships only static per-weight files (no `[...]` variable font) fails with a clear error
-rather than a silent 404 — on-demand *atlas* baking doesn't have the CSS2-API escape hatch the
+rather than a silent 404 — on-demand _atlas_ baking doesn't have the CSS2-API escape hatch the
 preview script does, since it needs the freezable variable font, not a pre-instanced one.
 
 Not every variable font shares the same axes — `Roboto[wdth,wght].ttf` has no `opsz` axis, for
@@ -256,12 +271,12 @@ to git-shippable, and there's no single right answer for where the actual atlas 
 generator + **recipe** in git, generated **output** gitignored — each consumer bakes it themselves,
 wherever they want the result to end up:
 
-| Committed | Gitignored (baked locally, per consumer) |
-| --- | --- |
-| `data/google-fonts-catalog.json` (what *could* be offered) | `<variant>-msdf.json` / `.png` (the atlas) |
-| `charset.txt` (the character-set decision, per baked variant) | `source/` (frozen static TTF + `OFL.txt`) |
-| `manifest.json` (catalog merged with what's *actually* baked) | `.cache/` (downloaded sources, frozen preview instances) |
-| `<Family>/<name>.svg` — **all 2276 of them**, full catalog | |
+| Committed                                                     | Gitignored (baked locally, per consumer)                 |
+| ------------------------------------------------------------- | -------------------------------------------------------- |
+| `data/google-fonts-catalog.json` (what _could_ be offered)    | `<variant>-msdf.json` / `.png` (the atlas)               |
+| `charset.txt` (the character-set decision, per baked variant) | `source/` (frozen static TTF + `OFL.txt`)                |
+| `manifest.json` (catalog merged with what's _actually_ baked) | `.cache/` (downloaded sources, frozen preview instances) |
+| `<Family>/<name>.svg` — **all 2276 of them**, full catalog    |                                                          |
 
 `fonts/manifest.json`'s `atlas`/`texture`/`preview` paths are always present, for every entry — see
 the catalog/manifest section above for why (deterministic, convention-based, not conditional on a
@@ -304,7 +319,7 @@ a local, gitignored artifact of having run the pipeline, same as any other consu
   static-only families too) — `serve.mjs` just hasn't been switched over to it, since with the
   full catalog now pre-baked, on-demand baking is mostly moot until the catalog itself changes.
 - Actually publishing baked output anywhere (CDN/hosting) — bake output is local-only right now;
-  "gitignored" just means it isn't shipped via *this* repo, not that it's shipped anywhere else yet.
+  "gitignored" just means it isn't shipped via _this_ repo, not that it's shipped anywhere else yet.
 - A real "bake on first request, cache on CDN forever" flow for **production** (multiple
   concurrent users, dedup/locking so the same font isn't baked twice at once) — `scripts/serve.mjs`
   is the single-developer local equivalent, deliberately without any of that, per README's earlier
