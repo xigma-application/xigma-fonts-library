@@ -35,7 +35,7 @@ without shipping font binaries or the generator tooling inside the app's own bun
 > | `npm run fonts:bake-all` | **Bake every atlas** from the list (downloads missing TTFs on the way)                  |
 > | `npm run fonts:previews` | Generate the picker preview SVG for every font                                          |
 > | `npm run fonts:manifest` | Rebuild `fonts/manifest.json` (which variants are actually baked)                       |
-> | `npm run fonts:serve`    | Local server on `:8787` that bakes a missing atlas on first request                     |
+> | `npm run fonts:serve`    | Local server on `:7720` that bakes a missing atlas on first request                     |
 > | `npm run bake`           | Bake a single variant (`scripts/bake_font.sh`)                                          |
 
 ## Why this repo exists
@@ -282,8 +282,13 @@ generated locally" below) — so instead of a CDN + queue + lock-based bake-on-d
 is the single-process local equivalent: "if it's not there, bake it; if it is, serve it
 immediately." One developer, requests handled one at a time, nothing to deduplicate.
 
+The port comes from `DEV_PORTS['xigma-fonts-library']` in `@xigma/utils` (xigma-app-shared), the same
+place the other xigma apps take theirs from — `npm run fonts:serve` pulls `@xigma/utils` first
+(`scripts/xigma-pull.cjs`, configured by `xigma.json`), exactly like xigma-app-website's `predev`.
+
 ```bash
-node scripts/serve.mjs         # http://localhost:8787
+npm run fonts:serve            # http://localhost:7720
+npm run fonts:serve -- 9000    # any other port
 ```
 
 | Route                                                                 | Behavior                                                                                                                                                                            |

@@ -1,4 +1,4 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["fonts", "data", ".cache"]
+  "ignorePatterns": ["fonts", "data", ".cache", "scripts/xigma-pull.cjs", ".xigma-cache"]
 }

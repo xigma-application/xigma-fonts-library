@@ -17,7 +17,7 @@
  * font) fails with a clear error rather than silently 404ing.
  *
  * Usage:
- *   node scripts/serve.mjs [port]   # default 8787
+ *   node scripts/serve.mjs [port]   # default: DEV_PORTS['xigma-fonts-library'] from @xigma/utils (7720)
  */
 
 import { execFileSync } from 'node:child_process';
@@ -25,6 +25,8 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { DEV_PORTS } from '@xigma/utils';
 
 import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
 
@@ -200,7 +202,7 @@ async function handleRequest(req, res) {
 }
 
 function main() {
-  const port = Number(process.argv[2]) || 8787;
+  const port = Number(process.argv[2]) || DEV_PORTS['xigma-fonts-library'];
 
   http
     .createServer((req, res) => {

@@ -3,5 +3,5 @@
   "printWidth": 140,
   "singleQuote": true,
   "sortPackageJson": false,
-  "ignorePatterns": ["fonts", "data", ".cache", ".claude"]
+  "ignorePatterns": ["fonts", "data", ".cache", ".claude", "scripts/xigma-pull.cjs", ".xigma-cache"]
 }

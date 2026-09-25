@@ -1,0 +1,5 @@
+{
+  "repo": "git@github.com:xigma-application/xigma-app-shared.git",
+  "branch": "main",
+  "packages": ["utils"]
+}

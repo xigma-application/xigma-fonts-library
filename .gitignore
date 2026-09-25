@@ -21,3 +21,6 @@ fonts/*/*/charset.txt
 # scripts/serve.mjs's local cache of downloaded Google Fonts variable-font sources, so baking a
 # second weight of an already-seen family doesn't re-download it.
 .cache/
+
+# xigma shared package cache (survives npm's node_modules pruning)
+/.xigma-cache
