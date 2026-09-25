@@ -15,6 +15,8 @@ without shipping font binaries or the generator tooling inside the app's own bun
 >
 > ```bash
 > npm run fonts            # ✨ interactive UI: pick steps, live progress bars, ETA, Ctrl+C to stop & resume later
+> npm run fonts -- --all                  # same UI, every step, no menu
+> npm run fonts -- --steps=download,bake   # same UI, only these steps (catalog, download, bake, previews, manifest)
 >
 > # or run the steps directly:
 > npm run fonts:download   # ⬇️ download ALL source TTFs (~7800 files, ~3.6 GB) into .cache/css-instances/
