@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "bake": "scripts/bake_font.sh",
+    "fonts": "node scripts/pipeline.mjs",
     "fonts:catalog": "node scripts/fetch_google_fonts_catalog.mjs",
     "fonts:download": "node scripts/download_all_fonts.mjs",
     "fonts:bake-all": "node scripts/bake_all_fonts.mjs",
@@ -26,6 +27,7 @@
     "msdf-bmfont-xml": "^2.8.0"
   },
   "devDependencies": {
+    "@clack/prompts": "^1.8.1",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0"
   }

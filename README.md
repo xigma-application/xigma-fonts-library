@@ -14,23 +14,27 @@ without shipping font binaries or the generator tooling inside the app's own bun
 > `charset.txt`. **Every TTF and every atlas must be fetched/baked locally** — run this first:
 >
 > ```bash
+> npm run fonts            # ✨ interactive UI: pick steps, live progress bars, ETA, Ctrl+C to stop & resume later
+>
+> # or run the steps directly:
 > npm run fonts:download   # ⬇️ download ALL source TTFs (~7800 files, ~3.6 GB) into .cache/css-instances/
 > npm run fonts:bake-all   # 🔥 bake ALL MSDF atlases (~2.6 GB) into fonts/ — also downloads anything missing
 > ```
 >
-> **Both are safe to stop and re-run at any time** — anything already on disk is skipped, and one
+> **All of them are safe to stop and re-run at any time** — anything already on disk is skipped, and one
 > font failing never aborts the run (failures land in `.cache/download-failures.json` /
 > `.cache/bake-failures.json`).
 >
-> | Command                  | What it does                                                                   |
-> | ------------------------ | ------------------------------------------------------------------------------ |
-> | `npm run fonts:catalog`  | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json` |
-> | `npm run fonts:download` | **Download every source TTF** from the list (no baking)                        |
-> | `npm run fonts:bake-all` | **Bake every atlas** from the list (downloads missing TTFs on the way)         |
-> | `npm run fonts:previews` | Generate the picker preview SVG for every font                                 |
-> | `npm run fonts:manifest` | Rebuild `fonts/manifest.json` (which variants are actually baked)              |
-> | `npm run fonts:serve`    | Local server on `:8787` that bakes a missing atlas on first request            |
-> | `npm run bake`           | Bake a single variant (`scripts/bake_font.sh`)                                 |
+> | Command                  | What it does                                                                            |
+> | ------------------------ | --------------------------------------------------------------------------------------- |
+> | **`npm run fonts`**      | **Interactive pipeline UI** — pick steps from a menu, watch them run with live progress |
+> | `npm run fonts:catalog`  | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json`          |
+> | `npm run fonts:download` | **Download every source TTF** from the list (no baking)                                 |
+> | `npm run fonts:bake-all` | **Bake every atlas** from the list (downloads missing TTFs on the way)                  |
+> | `npm run fonts:previews` | Generate the picker preview SVG for every font                                          |
+> | `npm run fonts:manifest` | Rebuild `fonts/manifest.json` (which variants are actually baked)                       |
+> | `npm run fonts:serve`    | Local server on `:8787` that bakes a missing atlas on first request                     |
+> | `npm run bake`           | Bake a single variant (`scripts/bake_font.sh`)                                          |
 
 ## Why this repo exists
 
