@@ -297,6 +297,11 @@ npm run fonts:serve -- 9000    # any other port
 | `GET /fonts/<Family>/<Family>-<weight>[-Italic]/<...>-msdf.json\|png` | Served if on disk; otherwise baked (full pipeline: freeze + MSDF) then served                                                                                                       |
 | `GET /fonts/<Family>/<name>.svg`                                      | Served if on disk; otherwise a preview is generated (reuses an already-baked static TTF for that family/style if one exists, else freezes a fresh Regular/400 instance) then served |
 
+`.json` and `.svg` responses are gzipped when the client sends `Accept-Encoding: gzip` (every browser
+does, and decompresses transparently — `fetch(...).then((r) => r.json())` needs no changes): the
+manifest drops from ~2.1 MB to ~120 KB, an atlas `.json` from ~170 KB to ~10 KB. `.png` is sent as
+is, since it's already compressed.
+
 Unlike the batch preview script above, on-demand **atlas** baking needs the actual variable font to
 freeze an arbitrary requested weight from — for that, `scripts/lib/googleFontsSource.mjs` resolves
 and downloads it from the google/fonts GitHub repo (not Google's CSS2 API, which only ever serves

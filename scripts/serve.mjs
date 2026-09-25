@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 
 import { DEV_PORTS } from '@xigma/utils';
 
@@ -43,6 +44,8 @@ const ATLAS_PATH_PATTERN = /^([^/]+)\/([^/]+)-(\d{1,4})(-Italic)?\/\2-\3\4-msdf\
 const PREVIEW_PATH_PATTERN = /^([^/]+)\/\1( Italic)?\.svg$/;
 
 const CONTENT_TYPES = { '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.txt': 'text/plain' };
+
+const GZIP_EXTENSIONS = new Set(['.json', '.svg']);
 
 function loadCatalog() {
   return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
@@ -106,11 +109,19 @@ async function bakePreview(family, italic, name) {
   execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'), staticTtf, name, outputPath]);
 }
 
-function sendFile(res, filePath) {
-  const contentType = CONTENT_TYPES[path.extname(filePath)] ?? 'application/octet-stream';
+function sendFile(req, res, filePath) {
+  const extension = path.extname(filePath);
+  const contentType = CONTENT_TYPES[extension] ?? 'application/octet-stream';
+  const gzip = GZIP_EXTENSIONS.has(extension) && /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
+  const headers = { 'Access-Control-Allow-Origin': '*', 'Content-Type': contentType, Vary: 'Accept-Encoding' };
 
-  res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
-  fs.createReadStream(filePath).pipe(res);
+  if (gzip) {
+    res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip' });
+    fs.createReadStream(filePath).pipe(zlib.createGzip()).pipe(res);
+  } else {
+    res.writeHead(200, headers);
+    fs.createReadStream(filePath).pipe(res);
+  }
 }
 
 function sendError(res, status, message) {
@@ -129,7 +140,7 @@ async function handleFontsRequest(req, res, relativePath) {
   const filePath = path.join(FONTS_DIR, relativePath);
 
   if (fs.existsSync(filePath)) {
-    sendFile(res, filePath);
+    sendFile(req, res, filePath);
     return;
   }
 
@@ -150,7 +161,7 @@ async function handleFontsRequest(req, res, relativePath) {
     }
 
     await bakeVariant(family, weight, Boolean(italicSuffix));
-    sendFile(res, filePath);
+    sendFile(req, res, filePath);
     return;
   }
 
@@ -166,7 +177,7 @@ async function handleFontsRequest(req, res, relativePath) {
     }
 
     await bakePreview(family, Boolean(italicSuffix), entry.name);
-    sendFile(res, filePath);
+    sendFile(req, res, filePath);
     return;
   }
 
@@ -186,7 +197,7 @@ async function handleRequest(req, res) {
 
     if (pathname === '/fonts/manifest.json') {
       regenerateManifest();
-      sendFile(res, path.join(FONTS_DIR, 'manifest.json'));
+      sendFile(req, res, path.join(FONTS_DIR, 'manifest.json'));
       return;
     }
 
