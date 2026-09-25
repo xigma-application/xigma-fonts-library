@@ -6,6 +6,12 @@
   "private": true,
   "scripts": {
     "bake": "scripts/bake_font.sh",
+    "fonts:catalog": "node scripts/fetch_google_fonts_catalog.mjs",
+    "fonts:download": "node scripts/download_all_fonts.mjs",
+    "fonts:bake-all": "node scripts/bake_all_fonts.mjs",
+    "fonts:previews": "node scripts/generate_all_previews.mjs",
+    "fonts:manifest": "node scripts/generate_manifest.mjs",
+    "fonts:serve": "node scripts/serve.mjs",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format:check": "oxfmt --check .",

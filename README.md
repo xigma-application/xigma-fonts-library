@@ -5,6 +5,33 @@ component/UI library like [`xigma-app-shared`](../xigma-app-shared) — this rep
 glyph-atlas assets (`atlas.png` + `atlas.json`) that `xigma-app`'s WebGL text renderer consumes,
 without shipping font binaries or the generator tooling inside the app's own bundle/repo.
 
+> [!IMPORTANT]
+>
+> ## ⚠️ FONTS ARE NOT IN GIT — YOU MUST DOWNLOAD THEM YOURSELF ⚠️
+>
+> **A fresh clone has NO font files and NO atlases.** Git only holds the font list
+> (`data/google-fonts-catalog.json`), `fonts/manifest.json`, the preview SVGs and each variant's
+> `charset.txt`. **Every TTF and every atlas must be fetched/baked locally** — run this first:
+>
+> ```bash
+> npm run fonts:download   # ⬇️ download ALL source TTFs (~7800 files, ~3.6 GB) into .cache/css-instances/
+> npm run fonts:bake-all   # 🔥 bake ALL MSDF atlases (~2.6 GB) into fonts/ — also downloads anything missing
+> ```
+>
+> **Both are safe to stop and re-run at any time** — anything already on disk is skipped, and one
+> font failing never aborts the run (failures land in `.cache/download-failures.json` /
+> `.cache/bake-failures.json`).
+>
+> | Command                  | What it does                                                                   |
+> | ------------------------ | ------------------------------------------------------------------------------ |
+> | `npm run fonts:catalog`  | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json` |
+> | `npm run fonts:download` | **Download every source TTF** from the list (no baking)                        |
+> | `npm run fonts:bake-all` | **Bake every atlas** from the list (downloads missing TTFs on the way)         |
+> | `npm run fonts:previews` | Generate the picker preview SVG for every font                                 |
+> | `npm run fonts:manifest` | Rebuild `fonts/manifest.json` (which variants are actually baked)              |
+> | `npm run fonts:serve`    | Local server on `:8787` that bakes a missing atlas on first request            |
+> | `npm run bake`           | Bake a single variant (`scripts/bake_font.sh`)                                 |
+
 ## Why this repo exists
 
 `xigma-app` renders text in WebGL using a real **MSDF (Multi-channel Signed Distance Field) glyph
@@ -205,6 +232,16 @@ whole run — real result from the full catalog: **2255 generated, 21 already pr
 script with no glyphs to render their own Latin-alphabet name (Khmer, Noto Serif Myanmar, Noto
 *Emoji, Karla Tamil *, ...), plus a handful where Google's CSS2 API doesn't serve a plain `400`
 for that specific family. Failure details land in `.cache/preview-failures.json` (gitignored).
+
+## `scripts/download_all_fonts.mjs` — every source TTF, no baking
+
+**`npm run fonts:download`** — downloads the source TTF for every `(family, weight, style)` in
+`data/google-fonts-catalog.json` into `.cache/css-instances/<Family>/`, the exact files
+`bake_all_fonts.mjs` bakes from, without baking anything. Use it to fetch everything up front (e.g.
+before going offline) and bake later. Same source as below (Google's CSS2 API via
+`scripts/lib/googleFontsCss.mjs`), 8 downloads at a time, skips anything already cached, and writes
+failures to `.cache/download-failures.json`. Expect ~58 failures: weights the catalog lists but
+Google's CSS2 API doesn't actually serve (e.g. `1` or `1000`).
 
 ## `scripts/bake_all_fonts.mjs` — the whole catalog, baked up front
 
