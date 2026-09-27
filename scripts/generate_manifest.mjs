@@ -3,11 +3,13 @@
  * Writes fonts/manifest.json from data/google-fonts-catalog.json (the full "what could we offer"
  * list — 2292 entries, fetched via scripts/fetch_google_fonts_catalog.mjs).
  *
- * Every entry gets `preview`/`atlas`/`texture` paths, always — computed from this repo's own
+ * Every entry gets `preview`/`atlas`/`texture`/`font` paths, always — computed from this repo's own
  * naming convention (`fonts/<Family>/<Family>-<weight>[-Italic]/...`), the same convention
  * `scripts/bake_font.sh` writes to. These are deterministic, not conditional: a consumer always
  * knows the URL/path a font *would* live at, whether or not it's been baked in this checkout yet
- * — no branching on "does this entry have an atlas field." Each weight also carries `baked: bool`,
+ * — no branching on "does this entry have an atlas field." `font` is the variant's static TTF,
+ * which a consumer needs for real vector outlines (flatten, booleans, SVG/PDF export) since an MSDF
+ * atlas holds none. Each weight also carries `baked: bool`,
  * set by actually checking the file exists on disk right now, so a consumer can tell a guaranteed
  * hit from a path that needs baking-on-demand first (see README's "bake once, cache on CDN forever"
  * discussion) without doing a network round-trip just to find out.
@@ -60,11 +62,12 @@ function resolveWeightPaths(family, weight, italic) {
 
   const atlas = toManifestPath(family, variant, `${baseName}.json`);
   const texture = toManifestPath(family, variant, `${baseName}.png`);
+  const font = toManifestPath(family, variant, 'source', `${variant}.ttf`);
   const baked =
     fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`)) &&
     fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
 
-  return { weight, atlas, texture, baked };
+  return { weight, atlas, texture, font, baked };
 }
 
 // Matches scripts/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is

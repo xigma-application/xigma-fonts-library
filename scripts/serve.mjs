@@ -9,6 +9,7 @@
  *   GET /fonts/manifest.json                                          — regenerated fresh each request
  *   GET /fonts/<Family>/<Family>-<weight>[-Italic]/<...>-msdf.json|png — atlas/texture, baked on miss
  *   GET /fonts/<Family>/<Family>[-Italic].svg                         — preview, baked on miss
+ *   GET /fonts/<Family>/<variant>/source/<variant>.ttf                — static TTF, from fonts/ or .cache/css-instances/
  *
  * Baking on demand needs the family's source variable-font TTF, which isn't in this repo — it's
  * downloaded from google/fonts on first request per family and cached under .cache/ (gitignored),
@@ -29,6 +30,7 @@ import zlib from 'node:zlib';
 
 import { DEV_PORTS } from '@xigma/utils';
 
+import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
 import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
 
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -42,8 +44,15 @@ const ATLAS_PATH_PATTERN = /^([^/]+)\/([^/]+)-(\d{1,4})(-Italic)?\/\2-\3\4-msdf\
 // Preview filenames are named after the display name verbatim ("Inter Italic.svg", space —
 // matching scripts/generate_all_previews.mjs), not the dash convention atlas variant dirs use.
 const PREVIEW_PATH_PATTERN = /^([^/]+)\/\1( Italic)?\.svg$/;
+const SOURCE_TTF_PATH_PATTERN = /^([^/]+)\/([^/]+)\/source\/\2\.ttf$/;
 
-const CONTENT_TYPES = { '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.txt': 'text/plain' };
+const CONTENT_TYPES = {
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.ttf': 'font/ttf',
+  '.txt': 'text/plain',
+};
 
 const GZIP_EXTENSIONS = new Set(['.json', '.svg']);
 
@@ -178,6 +187,14 @@ async function handleFontsRequest(req, res, relativePath) {
 
     await bakePreview(family, Boolean(italicSuffix), entry.name);
     sendFile(req, res, filePath);
+    return;
+  }
+
+  const sourceMatch = relativePath.match(SOURCE_TTF_PATH_PATTERN);
+  const sourceTtf = sourceMatch && resolveVariantTtf(FONTS_DIR, CACHE_DIR, sourceMatch[1], sourceMatch[2]);
+
+  if (sourceTtf) {
+    sendFile(req, res, sourceTtf);
     return;
   }
 

@@ -316,6 +316,34 @@ example, unlike Inter. `scripts/freeze_variable_font.py` now drops a pin for an 
 doesn't have (printing a note to stderr) instead of crashing, so the server's blanket `opsz=14`
 convention pin doesn't break every family that lacks that axis.
 
+## `scripts/build_deploy.mjs` — an upload-ready copy for the font host
+
+**`npm run fonts:deploy-build`** assembles `dist/` (gitignored), everything xigma-app fetches from the
+font host — `PROD_URLS['xigma-fonts-library']` in `@xigma/utils`, `https://fonts.xigma.app` — laid out
+under the same `fonts/...` paths `fonts:serve` uses, so the app resolves identical paths against
+`localhost:7720` in development and against the host in production:
+
+| Path in `dist/`                                         | What                                                          |
+| ------------------------------------------------------- | ------------------------------------------------------------- |
+| `fonts/manifest.json`                                   | Only fonts with at least one baked weight, only baked weights |
+| `fonts/<Family>/<name>.svg`                             | Picker previews                                               |
+| `fonts/<Family>/<variant>/<variant>-msdf.json` / `.png` | MSDF atlas + texture                                          |
+| `fonts/<Family>/<variant>/source/<variant>.ttf`         | Static TTF (`font` in the manifest), for real vector outlines |
+| `_headers`                                              | CORS + cache rules in Cloudflare Pages / Netlify syntax       |
+
+Files are hard links into `fonts/` and `.cache/css-instances/`, so the build takes seconds and no extra
+disk space; the upload itself is ~6 GB in ~25,600 files. That file count is over Cloudflare Pages'
+20,000-file limit, so publish to an object store behind a CDN (Cloudflare R2, S3 + CloudFront) and set
+the same rules as `_headers` on upload — for example:
+
+```bash
+aws s3 sync dist/fonts s3://<bucket>/fonts --cache-control "public, max-age=604800, stale-while-revalidate=86400"
+aws s3 cp dist/fonts/manifest.json s3://<bucket>/fonts/manifest.json --cache-control "public, max-age=3600" --content-type application/json
+```
+
+plus a bucket CORS rule allowing `GET` from any origin, and CDN compression on for `.json`/`.svg`
+(an atlas `.json` gzips from ~170 KB to ~10 KB, the manifest from ~2 MB to ~120 KB).
+
 ## What's committed vs. generated locally
 
 Baking everything Google Fonts offers would be several GB (see sizing note below) — nowhere close

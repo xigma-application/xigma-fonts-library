@@ -22,5 +22,8 @@ fonts/*/*/charset.txt
 # second weight of an already-seen family doesn't re-download it.
 .cache/
 
+# scripts/build_deploy.mjs output — an upload-ready copy of fonts/ (hard links, rebuilt every run).
+/dist
+
 # xigma shared package cache (survives npm's node_modules pruning)
 /.xigma-cache
