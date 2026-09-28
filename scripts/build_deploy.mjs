@@ -6,6 +6,7 @@
  *   dist/_headers                                                  — CORS + cache rules (Cloudflare Pages / Netlify syntax)
  *   dist/fonts/manifest.json                                       — only fonts with at least one baked weight
  *   dist/fonts/<Family>/<name>.svg                                 — picker previews
+ *   dist/fonts/previews.json                                       — every picker preview in one file
  *   dist/fonts/<Family>/<variant>/<variant>-msdf.json|png          — MSDF atlas + texture
  *   dist/fonts/<Family>/<variant>/source/<variant>.ttf             — static TTF for vector outlines
  *
@@ -82,6 +83,7 @@ function deployEntry(entry) {
 
 function main() {
   execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });
+  execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_previews_bundle.py')], { stdio: 'inherit' });
   fs.rmSync(DIST_DIR, { force: true, recursive: true });
   fs.mkdirSync(path.join(DIST_DIR, 'fonts'), { recursive: true });
 
@@ -91,6 +93,7 @@ function main() {
   const missingFonts = deployed.reduce((count, entry) => count + entry.weights.filter((weight) => !weight.font).length, 0);
 
   fs.writeFileSync(path.join(DIST_DIR, 'fonts', 'manifest.json'), `${JSON.stringify(deployed)}\n`);
+  linkFile(path.join(FONTS_DIR, 'previews.json'), path.join('fonts', 'previews.json'));
   fs.writeFileSync(path.join(DIST_DIR, '_headers'), HEADERS);
   console.log(`dist/: ${deployed.length} font group(s), ${weightCount} weight(s), ${missingFonts} without a source TTF`);
 }

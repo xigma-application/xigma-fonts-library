@@ -13,6 +13,10 @@ fonts/*/*/*-msdf.png
 fonts/*/*/source/
 fonts/*/*/charset.txt
 
+# scripts/generate_previews_bundle.py output — every committed preview SVG in one file for the
+# picker, rebuilt from them (and by the deploy build), so it would only duplicate them in git.
+fonts/previews.json
+
 # Preview SVGs (fonts/*/*.svg) are NOT ignored, unlike the atlas/source above — they're
 # deliberately committed for the full catalog (scripts/generate_all_previews.mjs), ~33MB total,
 # nowhere near the atlas/source scale. A picker needs every row's preview at once, unlike an atlas
