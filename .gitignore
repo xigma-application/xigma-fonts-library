@@ -4,6 +4,9 @@ __pycache__/
 venv/
 node_modules/
 
+# Local environment (see .env.example)
+.env
+
 # Generated baking output — heavy, and would scale to several GB across the full font catalog
 # (see README "What's committed vs. generated locally"). Each deployment bakes these itself
 # (locally, or in CI to publish to a CDN); only the recipe (charset.txt) and the small,

@@ -27,17 +27,17 @@ without shipping font binaries or the generator tooling inside the app's own bun
 > font failing never aborts the run (failures land in `.cache/download-failures.json` /
 > `.cache/bake-failures.json`).
 >
-> | Command                         | What it does                                                                                                                 |
-> | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-> | **`npm run fonts`**             | **Interactive pipeline UI** — pick steps from a menu, watch them run with live progress                                      |
-> | `npm run fonts:catalog`         | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json`                                               |
-> | `npm run fonts:download`        | **Download every source TTF** from the list (no baking)                                                                      |
-> | `npm run fonts:bake-all`        | **Bake every atlas** from the list (downloads missing TTFs on the way)                                                       |
-> | `npm run fonts:bake-small-caps` | Re-bake the atlases of fonts with small caps from their full source (`--family X`; set `GITHUB_TOKEN` for the whole catalog) |
-> | `npm run fonts:previews`        | Generate the picker preview SVG for every font                                                                               |
-> | `npm run fonts:manifest`        | Rebuild `fonts/manifest.json` (which variants are actually baked)                                                            |
-> | `npm run fonts:serve`           | Local server on `:7720` that bakes a missing atlas on first request                                                          |
-> | `npm run bake`                  | Bake a single variant (`scripts/bake_font.sh`)                                                                               |
+> | Command                         | What it does                                                                            |
+> | ------------------------------- | --------------------------------------------------------------------------------------- |
+> | **`npm run fonts`**             | **Interactive pipeline UI** — pick steps from a menu, watch them run with live progress |
+> | `npm run fonts:catalog`         | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json`          |
+> | `npm run fonts:download`        | **Download every source TTF** from the list (no baking)                                 |
+> | `npm run fonts:bake-all`        | **Bake every atlas** from the list (downloads missing TTFs on the way)                  |
+> | `npm run fonts:bake-small-caps` | Re-bake the atlases of fonts with small caps from their full source (`--family X`)      |
+> | `npm run fonts:previews`        | Generate the picker preview SVG for every font                                          |
+> | `npm run fonts:manifest`        | Rebuild `fonts/manifest.json` (which variants are actually baked)                       |
+> | `npm run fonts:serve`           | Local server on `:7720` that bakes a missing atlas on first request                     |
+> | `npm run bake`                  | Bake a single variant (`scripts/bake_font.sh`)                                          |
 
 ## Why this repo exists
 

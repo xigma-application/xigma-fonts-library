@@ -1107,7 +1107,7 @@
         "texture": "fonts/Alegreya/Alegreya-400/Alegreya-400-msdf.png",
         "font": "fonts/Alegreya/Alegreya-400/source/Alegreya-400.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 500,
@@ -1115,7 +1115,7 @@
         "texture": "fonts/Alegreya/Alegreya-500/Alegreya-500-msdf.png",
         "font": "fonts/Alegreya/Alegreya-500/source/Alegreya-500.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 600,
@@ -1123,7 +1123,7 @@
         "texture": "fonts/Alegreya/Alegreya-600/Alegreya-600-msdf.png",
         "font": "fonts/Alegreya/Alegreya-600/source/Alegreya-600.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 700,
@@ -1131,7 +1131,7 @@
         "texture": "fonts/Alegreya/Alegreya-700/Alegreya-700-msdf.png",
         "font": "fonts/Alegreya/Alegreya-700/source/Alegreya-700.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 800,
@@ -1139,7 +1139,7 @@
         "texture": "fonts/Alegreya/Alegreya-800/Alegreya-800-msdf.png",
         "font": "fonts/Alegreya/Alegreya-800/source/Alegreya-800.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 900,
@@ -1147,7 +1147,7 @@
         "texture": "fonts/Alegreya/Alegreya-900/Alegreya-900-msdf.png",
         "font": "fonts/Alegreya/Alegreya-900/source/Alegreya-900.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       }
     ]
   },
@@ -1161,7 +1161,7 @@
         "texture": "fonts/Alegreya/Alegreya-400-Italic/Alegreya-400-Italic-msdf.png",
         "font": "fonts/Alegreya/Alegreya-400-Italic/source/Alegreya-400-Italic.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 500,
@@ -1169,7 +1169,7 @@
         "texture": "fonts/Alegreya/Alegreya-500-Italic/Alegreya-500-Italic-msdf.png",
         "font": "fonts/Alegreya/Alegreya-500-Italic/source/Alegreya-500-Italic.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 600,
@@ -1177,7 +1177,7 @@
         "texture": "fonts/Alegreya/Alegreya-600-Italic/Alegreya-600-Italic-msdf.png",
         "font": "fonts/Alegreya/Alegreya-600-Italic/source/Alegreya-600-Italic.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 700,
@@ -1185,7 +1185,7 @@
         "texture": "fonts/Alegreya/Alegreya-700-Italic/Alegreya-700-Italic-msdf.png",
         "font": "fonts/Alegreya/Alegreya-700-Italic/source/Alegreya-700-Italic.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 800,
@@ -1193,7 +1193,7 @@
         "texture": "fonts/Alegreya/Alegreya-800-Italic/Alegreya-800-Italic-msdf.png",
         "font": "fonts/Alegreya/Alegreya-800-Italic/source/Alegreya-800-Italic.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 900,
@@ -1201,7 +1201,7 @@
         "texture": "fonts/Alegreya/Alegreya-900-Italic/Alegreya-900-Italic-msdf.png",
         "font": "fonts/Alegreya/Alegreya-900-Italic/source/Alegreya-900-Italic.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       }
     ]
   },
@@ -15105,7 +15105,7 @@
         "texture": "fonts/Cormorant Garamond/Cormorant Garamond-300/Cormorant Garamond-300-msdf.png",
         "font": "fonts/Cormorant Garamond/Cormorant Garamond-300/source/Cormorant Garamond-300.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 400,
@@ -15113,7 +15113,7 @@
         "texture": "fonts/Cormorant Garamond/Cormorant Garamond-400/Cormorant Garamond-400-msdf.png",
         "font": "fonts/Cormorant Garamond/Cormorant Garamond-400/source/Cormorant Garamond-400.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 500,
@@ -15121,7 +15121,7 @@
         "texture": "fonts/Cormorant Garamond/Cormorant Garamond-500/Cormorant Garamond-500-msdf.png",
         "font": "fonts/Cormorant Garamond/Cormorant Garamond-500/source/Cormorant Garamond-500.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 600,
@@ -15129,7 +15129,7 @@
         "texture": "fonts/Cormorant Garamond/Cormorant Garamond-600/Cormorant Garamond-600-msdf.png",
         "font": "fonts/Cormorant Garamond/Cormorant Garamond-600/source/Cormorant Garamond-600.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       },
       {
         "weight": 700,
@@ -15137,7 +15137,7 @@
         "texture": "fonts/Cormorant Garamond/Cormorant Garamond-700/Cormorant Garamond-700-msdf.png",
         "font": "fonts/Cormorant Garamond/Cormorant Garamond-700/source/Cormorant Garamond-700.ttf",
         "baked": true,
-        "smallCaps": false
+        "smallCaps": true
       }
     ]
   },

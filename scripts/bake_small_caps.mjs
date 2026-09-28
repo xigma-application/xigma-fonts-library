@@ -15,9 +15,6 @@
  * turns into `smallCaps: true` on that weight. Variants already listed there with an atlas on disk
  * are skipped, so the run is safe to stop and resume; one family failing never aborts it.
  *
- * The google/fonts listing goes through the GitHub API (60 requests an hour without a token): set
- * GITHUB_TOKEN to go through the whole catalog in one run.
- *
  * Usage:
  *   node scripts/bake_small_caps.mjs                              — every family in the catalog
  *   node scripts/bake_small_caps.mjs --family Roboto --family "Alegreya Sans"
