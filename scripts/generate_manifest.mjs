@@ -3,7 +3,7 @@
  * Writes fonts/manifest.json from data/google-fonts-catalog.json (the full "what could we offer"
  * list — 2292 entries, fetched via scripts/fetch_google_fonts_catalog.mjs).
  *
- * Every entry gets `preview`/`atlas`/`texture`/`font` paths, always — computed from this repo's own
+ * Every weight gets `atlas`/`texture`/`font` paths, always — computed from this repo's own
  * naming convention (`fonts/<Family>/<Family>-<weight>[-Italic]/...`), the same convention
  * `scripts/bake_font.sh` writes to. These are deterministic, not conditional: a consumer always
  * knows the URL/path a font *would* live at, whether or not it's been baked in this checkout yet
@@ -12,7 +12,10 @@
  * atlas holds none. Each weight also carries `baked: bool`,
  * set by actually checking the file exists on disk right now, so a consumer can tell a guaranteed
  * hit from a path that needs baking-on-demand first (see README's "bake once, cache on CDN forever"
- * discussion) without doing a network round-trip just to find out.
+ * discussion) without doing a network round-trip just to find out. `preview` is the one exception:
+ * preview SVGs are committed for the whole catalog, so a missing file means the font has no glyphs to
+ * write its own name with (Khmer, Myanmar, emoji...), not that it still needs baking — it is null then,
+ * and a picker shows the name in its own UI font instead.
  *
  * This is the "manifest/katalog dostępnych fontów" from xigma-app/docs/ROADMAP.md Etap 9 — what a
  * font picker in xigma-app's text-properties panel would fetch to know what's offerable.
@@ -73,7 +76,7 @@ function resolveWeightPaths(family, weight, italic) {
 // Matches scripts/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is
 // named after `name` verbatim (spaces and all), not dash-replaced.
 function resolvePreviewPath(family, name) {
-  return toManifestPath(family, `${name}.svg`);
+  return fs.existsSync(path.join(FONTS_DIR, family, `${name}.svg`)) ? toManifestPath(family, `${name}.svg`) : null;
 }
 
 function buildManifest(catalog) {

@@ -1777,7 +1777,7 @@
   },
   {
     "name": "Allkin",
-    "preview": "fonts/Allkin/Allkin.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -12162,7 +12162,7 @@
   },
   {
     "name": "Chenla",
-    "preview": "fonts/Chenla/Chenla.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -13383,7 +13383,7 @@
   },
   {
     "name": "Content",
-    "preview": "fonts/Content/Content.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -28506,7 +28506,7 @@
   },
   {
     "name": "Karla Tamil Inclined",
-    "preview": "fonts/Karla Tamil Inclined/Karla Tamil Inclined.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -28526,7 +28526,7 @@
   },
   {
     "name": "Karla Tamil Upright",
-    "preview": "fonts/Karla Tamil Upright/Karla Tamil Upright.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -28814,7 +28814,7 @@
   },
   {
     "name": "Khmer",
-    "preview": "fonts/Khmer/Khmer.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -37824,7 +37824,7 @@
   },
   {
     "name": "Noto Color Emoji",
-    "preview": "fonts/Noto Color Emoji/Noto Color Emoji.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -37837,7 +37837,7 @@
   },
   {
     "name": "Noto Emoji",
-    "preview": "fonts/Noto Emoji/Noto Emoji.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 300,
@@ -40546,7 +40546,7 @@
   },
   {
     "name": "Noto Sans Lycian",
-    "preview": "fonts/Noto Sans Lycian/Noto Sans Lycian.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -44381,7 +44381,7 @@
   },
   {
     "name": "Noto Serif Myanmar",
-    "preview": "fonts/Noto Serif Myanmar/Noto Serif Myanmar.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 100,
@@ -47444,7 +47444,7 @@
   },
   {
     "name": "Phetsarath",
-    "preview": "fonts/Phetsarath/Phetsarath.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -51515,7 +51515,7 @@
   },
   {
     "name": "Ponnala",
-    "preview": "fonts/Ponnala/Ponnala.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,
@@ -58400,7 +58400,7 @@
   },
   {
     "name": "Siemreap",
-    "preview": "fonts/Siemreap/Siemreap.svg",
+    "preview": null,
     "weights": [
       {
         "weight": 400,

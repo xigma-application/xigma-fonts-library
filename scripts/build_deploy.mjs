@@ -67,11 +67,10 @@ function deployWeight(weight) {
 }
 
 function deployEntry(entry) {
-  const previewSource = path.join(REPO_ROOT, entry.preview);
-  const hasPreview = fs.existsSync(previewSource);
+  const hasPreview = Boolean(entry.preview) && fs.existsSync(path.join(REPO_ROOT, entry.preview));
 
   if (hasPreview) {
-    linkFile(previewSource, entry.preview);
+    linkFile(path.join(REPO_ROOT, entry.preview), entry.preview);
   }
 
   return {
