@@ -9,7 +9,7 @@
  * maps each small cap to U+E000 + its lower case codepoint; the atlas is then baked from that TTF
  * with the charset plus those codepoints, replacing the plain atlas, and the TTF is written to the
  * variant's source/ folder, so flattening and export outline the same small caps. Families with no
- * `smcp`, or with no variable-font source (static-only families), are skipped.
+ * `smcp` are skipped; a family with no variable font is read from its static file for each weight.
  *
  * Every variant baked this way is listed in data/small-caps.json, which scripts/generate_manifest.mjs
  * turns into `smallCaps: true` on that weight. Variants already listed there with an atlas on disk
@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
+import { ensureWeightSourceTtf } from './lib/googleFontsSource.mjs';
 
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
@@ -114,20 +114,23 @@ async function bakeEntry(entry, smallCaps) {
     return 'skipped';
   }
 
-  const sourceTtf = await ensureSourceTtf(CACHE_DIR, entry.family, entry.italic);
+  let result = 'none';
 
   for (const weight of pending) {
-    const variant = bakeVariant(sourceTtf, entry.family, weight, entry.italic);
+    // eslint-disable-next-line no-await-in-loop
+    const sourceTtf = await ensureWeightSourceTtf(CACHE_DIR, entry.family, weight, entry.italic);
+    const variant = sourceTtf ? bakeVariant(sourceTtf, entry.family, weight, entry.italic) : null;
 
     if (!variant) {
-      return 'none';
+      return result;
     }
 
     smallCaps.add(variant);
     saveSmallCaps(smallCaps);
+    result = 'baked';
   }
 
-  return 'baked';
+  return result;
 }
 
 async function main() {
@@ -151,7 +154,7 @@ async function main() {
       counts[result] += 1;
 
       if (result === 'baked') {
-        console.log(`[${i + 1}/${entries.length}] small caps baked: ${entry.name}`);
+        console.log(`[${i + 1}/${entries.length}] baked: ${entry.name}`);
       }
     } catch (error) {
       failures.push({ label: entry.name, message: error.message });

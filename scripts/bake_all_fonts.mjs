@@ -13,8 +13,13 @@
  * Skips any (family, weight, style) already baked on disk, so it's safe to re-run/resume.
  * Continues past a single entry's failure rather than aborting the whole run.
  *
+ * Then re-bakes the fonts that have small caps with them (scripts/bake_small_caps.mjs), so this one
+ * command leaves every atlas complete; --without-small-caps skips that (the pipeline UI runs it as
+ * its own step).
+ *
  * Usage:
  *   node scripts/bake_all_fonts.mjs
+ *   node scripts/bake_all_fonts.mjs --without-small-caps
  */
 
 import { execFileSync } from 'node:child_process';
@@ -120,6 +125,11 @@ async function main() {
     fs.mkdirSync(path.dirname(failuresPath), { recursive: true });
     fs.writeFileSync(failuresPath, `${JSON.stringify(failures, null, 2)}\n`);
     console.log(`failure details: ${failuresPath}`);
+  }
+
+  if (!process.argv.includes('--without-small-caps')) {
+    console.log('');
+    execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'bake_small_caps.mjs')], { stdio: 'inherit' });
   }
 
   execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });

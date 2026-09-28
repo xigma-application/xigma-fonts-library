@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Interactive terminal UI that runs the font pipeline steps (font list, TTF download, atlas
- * baking, preview SVGs, manifest) one after another, with spinners, live gradient progress bars,
+ * baking, small caps, preview SVGs, manifest) one after another, with spinners, live gradient progress bars,
  * counters and ETA parsed from each script's own output. Ctrl+C stops cleanly — every step is
  * resumable, so re-running picks up where it left off.
  *
@@ -190,7 +190,7 @@ function renderHeader(startedAt, now) {
 
 function runStep(state, onLine) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', state.step.script)], {
+    const child = spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', state.step.script), ...(state.step.args ?? [])], {
       cwd: REPO_ROOT,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -298,7 +298,10 @@ function runPlain(stepIds) {
   for (const step of PIPELINE_STEPS.filter((candidate) => stepIds.includes(candidate.id))) {
     console.log(`\n== ${step.label} (${step.script})`);
 
-    const { status } = spawnSync(process.execPath, [path.join(REPO_ROOT, 'scripts', step.script)], { cwd: REPO_ROOT, stdio: 'inherit' });
+    const { status } = spawnSync(process.execPath, [path.join(REPO_ROOT, 'scripts', step.script), ...(step.args ?? [])], {
+      cwd: REPO_ROOT,
+      stdio: 'inherit',
+    });
 
     if (status !== 0) {
       process.exit(status ?? 1);

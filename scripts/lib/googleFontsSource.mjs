@@ -100,17 +100,26 @@ export function pickVariableFileName(fileNames, italic) {
   return (italic ? italicFiles : romanFiles)[0];
 }
 
-export async function ensureSourceTtf(cacheDir, family, italic) {
-  const { licenseDir, fileNames } = await listFamilyFiles(cacheDir, family);
-  const fileName = pickVariableFileName(fileNames, italic);
+const STATIC_STYLE_NAMES = {
+  100: 'Thin',
+  200: 'ExtraLight',
+  300: 'Light',
+  400: 'Regular',
+  500: 'Medium',
+  600: 'SemiBold',
+  700: 'Bold',
+  800: 'ExtraBold',
+  900: 'Black',
+};
 
-  if (!fileName) {
-    throw new Error(
-      `"${family}"${italic ? ' Italic' : ''} has no variable-font file in google/fonts — ` +
-        'static-only families are not supported by on-demand baking yet',
-    );
-  }
+export function pickStaticFileName(fileNames, weight, italic) {
+  const style = STATIC_STYLE_NAMES[weight];
+  const suffix = italic ? `${weight === 400 ? '' : style}Italic` : style;
 
+  return fileNames.find((name) => name.endsWith(`-${suffix}.ttf`));
+}
+
+async function ensureFamilyFile(cacheDir, family, licenseDir, fileName) {
   const cachedPath = path.join(cacheDir, 'sources', familySlug(family), fileName);
 
   if (!fs.existsSync(cachedPath)) {
@@ -128,4 +137,30 @@ export async function ensureSourceTtf(cacheDir, family, italic) {
   }
 
   return cachedPath;
+}
+
+export async function ensureSourceTtf(cacheDir, family, italic) {
+  const { licenseDir, fileNames } = await listFamilyFiles(cacheDir, family);
+  const fileName = pickVariableFileName(fileNames, italic);
+
+  if (!fileName) {
+    throw new Error(
+      `"${family}"${italic ? ' Italic' : ''} has no variable-font file in google/fonts — ` +
+        'static-only families are not supported by on-demand baking yet',
+    );
+  }
+
+  return ensureFamilyFile(cacheDir, family, licenseDir, fileName);
+}
+
+/**
+ * The full source TTF of one (family, weight, style): the family's variable font when it has one,
+ * otherwise its static file for that weight (`<Family>-Bold.ttf`, `<Family>-LightItalic.ttf`...).
+ * Returns null when google/fonts has neither.
+ */
+export async function ensureWeightSourceTtf(cacheDir, family, weight, italic) {
+  const { licenseDir, fileNames } = await listFamilyFiles(cacheDir, family);
+  const fileName = pickVariableFileName(fileNames, italic) ?? pickStaticFileName(fileNames, weight, italic);
+
+  return fileName ? ensureFamilyFile(cacheDir, family, licenseDir, fileName) : null;
 }

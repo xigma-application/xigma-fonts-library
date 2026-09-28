@@ -1,7 +1,8 @@
 /**
  * The steps scripts/pipeline.mjs can run, each one an existing script run as a child process.
  * `parse` turns one line of that script's output into a progress update, so the pipeline UI can
- * draw a live progress bar without the scripts knowing anything about it.
+ * draw a live progress bar without the scripts knowing anything about it. `args` are passed to the
+ * script.
  *
  * Progress modes:
  * - `index`: the script logs `[i/N]` with its position in the whole list (skipped items are
@@ -59,6 +60,7 @@ export const PIPELINE_STEPS = [
     script: 'download_all_fonts.mjs',
   },
   {
+    args: ['--without-small-caps'],
     defaultSelected: true,
     hint: 'every MSDF atlas into fonts/',
     id: 'bake',
@@ -74,6 +76,23 @@ export const PIPELINE_STEPS = [
       return parseProgressLine(line) ?? parseDoneLine(line);
     },
     script: 'bake_all_fonts.mjs',
+  },
+  {
+    defaultSelected: true,
+    hint: 'atlases of fonts with small caps, from their full google/fonts source',
+    id: 'smallCaps',
+    label: 'Small caps',
+    mode: 'index',
+    parse: (line) => {
+      const header = line.match(/^(\d+) font group\(s\) to check for small caps/);
+
+      if (header) {
+        return { total: Number(header[1]) };
+      }
+
+      return parseProgressLine(line) ?? parseDoneLine(line);
+    },
+    script: 'bake_small_caps.mjs',
   },
   {
     defaultSelected: false,
