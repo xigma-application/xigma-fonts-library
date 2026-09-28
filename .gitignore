@@ -13,6 +13,7 @@ node_modules/
 # git-friendly manifest.json/preview SVGs are committed.
 fonts/*/*/*-msdf.json
 fonts/*/*/*-msdf.png
+fonts/*/*/*-features.json
 fonts/*/*/source/
 fonts/*/*/charset.txt
 

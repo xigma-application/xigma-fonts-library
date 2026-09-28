@@ -17,6 +17,8 @@
  * write its own name with (Khmer, Myanmar, emoji...), not that it still needs baking — it is null then,
  * and a picker shows the name in its own UI font instead. `smallCaps` is true for a weight whose atlas
  * scripts/bake_small_caps.mjs baked with the font's small caps (listed in data/small-caps.json).
+ * `features` is the path of the OpenType feature data of a weight scripts/bake_full_glyphs.mjs baked with
+ * every glyph of its font (listed in data/full-glyphs.json), null for the others.
  *
  * This is the "manifest/katalog dostępnych fontów" from xigma-app/docs/ROADMAP.md Etap 9 — what a
  * font picker in xigma-app's text-properties panel would fetch to know what's offerable.
@@ -35,6 +37,7 @@ const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
 const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
 const MANIFEST_PATH = path.join(FONTS_DIR, 'manifest.json');
 const SMALL_CAPS_PATH = path.join(REPO_ROOT, 'data', 'small-caps.json');
+const FULL_GLYPHS_PATH = path.join(REPO_ROOT, 'data', 'full-glyphs.json');
 
 // Explicit locale + base sensitivity: case and accents don't affect ordering, and it's
 // deterministic regardless of the runtime's default ICU locale, unlike a bare a.localeCompare(b).
@@ -65,7 +68,11 @@ function loadSmallCaps() {
   return new Set(fs.existsSync(SMALL_CAPS_PATH) ? JSON.parse(fs.readFileSync(SMALL_CAPS_PATH, 'utf8')) : []);
 }
 
-function resolveWeightPaths(family, weight, italic, smallCaps) {
+function loadFullGlyphs() {
+  return new Set(fs.existsSync(FULL_GLYPHS_PATH) ? JSON.parse(fs.readFileSync(FULL_GLYPHS_PATH, 'utf8')) : []);
+}
+
+function resolveWeightPaths(family, weight, italic, smallCaps, fullGlyphs) {
   const variant = variantDirName(family, weight, italic);
   const baseName = `${variant}-msdf`;
 
@@ -76,7 +83,9 @@ function resolveWeightPaths(family, weight, italic, smallCaps) {
     fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`)) &&
     fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
 
-  return { weight, atlas, texture, font, baked, smallCaps: baked && smallCaps.has(variant) };
+  const features = baked && fullGlyphs.has(variant) ? toManifestPath(family, variant, `${variant}-features.json`) : null;
+
+  return { weight, atlas, texture, font, baked, smallCaps: baked && smallCaps.has(variant), features };
 }
 
 // Matches scripts/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is
@@ -87,12 +96,13 @@ function resolvePreviewPath(family, name) {
 
 function buildManifest(catalog) {
   const smallCaps = loadSmallCaps();
+  const fullGlyphs = loadFullGlyphs();
 
   return catalog
     .map(({ name, family, italic, weights }) => ({
       name,
       preview: resolvePreviewPath(family, name),
-      weights: weights.map((weight) => resolveWeightPaths(family, weight, italic, smallCaps)),
+      weights: weights.map((weight) => resolveWeightPaths(family, weight, italic, smallCaps, fullGlyphs)),
     }))
     .sort((a, b) => alphabetically(a.name, b.name));
 }

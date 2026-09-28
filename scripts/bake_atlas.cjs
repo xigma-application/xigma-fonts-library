@@ -7,13 +7,20 @@
  * xigma-app's `generate:font-atlas` script (`msdf-bmfont-xml -f json -t msdf -s 64 -r 6 -p 2`) —
  * see xigma-app/docs/ROADMAP.md, Etap 7, for why those specific values were tuned.
  *
+ * `--texture-size <n>` bakes onto an n×n texture instead of 2048×2048, for a charset of every glyph of a
+ * font. `--no-kerning` leaves the kernings out: msdf-bmfont-xml measures every pair of the charset, which
+ * for thousands of characters takes long and writes a huge file, and a font baked with its features file
+ * (scripts/build_full_glyph_ttf.py) carries its kerning there instead.
+ *
  * Usage:
  *   node scripts/bake_atlas.cjs --font <static.ttf> --charset <charset.txt> --out-dir <dir> --name <inter-400>
+ *     [--texture-size 4096] [--no-kerning true]
  */
 
 const fs = require('fs');
 const path = require('path');
 const generateBMFont = require('msdf-bmfont-xml');
+const opentype = require('opentype.js');
 
 const DEFAULT_FONT_SIZE = 64;
 const DEFAULT_DISTANCE_RANGE = 6;
@@ -51,7 +58,7 @@ function loadCharset(charsetPath) {
   return fs.readFileSync(charsetPath, 'utf8');
 }
 
-function bakeAtlas(fontPath, charset, name) {
+function bakeAtlas(fontPath, charset, name, textureSize) {
   const opt = {
     filename: name,
     outputType: 'json',
@@ -60,7 +67,7 @@ function bakeAtlas(fontPath, charset, name) {
     fontSize: DEFAULT_FONT_SIZE,
     distanceRange: DEFAULT_DISTANCE_RANGE,
     texturePadding: DEFAULT_TEXTURE_PADDING,
-    textureSize: DEFAULT_TEXTURE_SIZE,
+    textureSize,
     smartSize: true,
   };
 
@@ -102,7 +109,13 @@ async function main() {
   const name = requireArg(args, 'name');
 
   const charset = loadCharset(charsetPath);
-  const { textures, font } = await bakeAtlas(fontPath, charset, name);
+  const textureSize = args['texture-size'] ? [Number(args['texture-size']), Number(args['texture-size'])] : DEFAULT_TEXTURE_SIZE;
+
+  if (args['no-kerning']) {
+    opentype.Font.prototype.getKerningValue = () => 0;
+  }
+
+  const { textures, font } = await bakeAtlas(fontPath, charset, name, textureSize);
 
   writeOutputs(outDir, name, textures, font);
 
