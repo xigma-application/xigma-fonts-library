@@ -9,6 +9,10 @@ import path from 'node:path';
 
 const GITHUB_CONTENTS_BASE = 'https://api.github.com/repos/google/fonts/contents';
 const LICENSE_DIRS = ['ofl', 'apache', 'ufl'];
+const GITHUB_HEADERS = {
+  'User-Agent': 'xigma-fonts-library',
+  ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+};
 
 export function familySlug(family) {
   return family.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -24,7 +28,7 @@ export async function listFamilyFiles(cacheDir, family) {
   for (const licenseDir of LICENSE_DIRS) {
     const url = `${GITHUB_CONTENTS_BASE}/${licenseDir}/${familySlug(family)}`;
     // eslint-disable-next-line no-await-in-loop
-    const response = await fetch(url, { headers: { 'User-Agent': 'xigma-fonts-library' } });
+    const response = await fetch(url, { headers: GITHUB_HEADERS });
 
     if (response.ok) {
       // eslint-disable-next-line no-await-in-loop

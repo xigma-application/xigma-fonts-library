@@ -10,6 +10,7 @@
     "fonts:catalog": "node scripts/fetch_google_fonts_catalog.mjs",
     "fonts:download": "node scripts/download_all_fonts.mjs",
     "fonts:bake-all": "node scripts/bake_all_fonts.mjs",
+    "fonts:bake-small-caps": "node scripts/bake_small_caps.mjs",
     "fonts:previews": "node scripts/generate_all_previews.mjs",
     "fonts:manifest": "node scripts/generate_manifest.mjs",
     "fonts:previews-bundle": "python3 scripts/generate_previews_bundle.py",

@@ -15,7 +15,8 @@
  * discussion) without doing a network round-trip just to find out. `preview` is the one exception:
  * preview SVGs are committed for the whole catalog, so a missing file means the font has no glyphs to
  * write its own name with (Khmer, Myanmar, emoji...), not that it still needs baking — it is null then,
- * and a picker shows the name in its own UI font instead.
+ * and a picker shows the name in its own UI font instead. `smallCaps` is true for a weight whose atlas
+ * scripts/bake_small_caps.mjs baked with the font's small caps (listed in data/small-caps.json).
  *
  * This is the "manifest/katalog dostępnych fontów" from xigma-app/docs/ROADMAP.md Etap 9 — what a
  * font picker in xigma-app's text-properties panel would fetch to know what's offerable.
@@ -33,6 +34,7 @@ const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
 const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
 const MANIFEST_PATH = path.join(FONTS_DIR, 'manifest.json');
+const SMALL_CAPS_PATH = path.join(REPO_ROOT, 'data', 'small-caps.json');
 
 // Explicit locale + base sensitivity: case and accents don't affect ordering, and it's
 // deterministic regardless of the runtime's default ICU locale, unlike a bare a.localeCompare(b).
@@ -59,7 +61,11 @@ function variantDirName(family, weight, italic) {
   return `${family}-${weight}${italic ? '-Italic' : ''}`;
 }
 
-function resolveWeightPaths(family, weight, italic) {
+function loadSmallCaps() {
+  return new Set(fs.existsSync(SMALL_CAPS_PATH) ? JSON.parse(fs.readFileSync(SMALL_CAPS_PATH, 'utf8')) : []);
+}
+
+function resolveWeightPaths(family, weight, italic, smallCaps) {
   const variant = variantDirName(family, weight, italic);
   const baseName = `${variant}-msdf`;
 
@@ -70,7 +76,7 @@ function resolveWeightPaths(family, weight, italic) {
     fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`)) &&
     fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
 
-  return { weight, atlas, texture, font, baked };
+  return { weight, atlas, texture, font, baked, smallCaps: baked && smallCaps.has(variant) };
 }
 
 // Matches scripts/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is
@@ -80,11 +86,13 @@ function resolvePreviewPath(family, name) {
 }
 
 function buildManifest(catalog) {
+  const smallCaps = loadSmallCaps();
+
   return catalog
     .map(({ name, family, italic, weights }) => ({
       name,
       preview: resolvePreviewPath(family, name),
-      weights: weights.map((weight) => resolveWeightPaths(family, weight, italic)),
+      weights: weights.map((weight) => resolveWeightPaths(family, weight, italic, smallCaps)),
     }))
     .sort((a, b) => alphabetically(a.name, b.name));
 }
