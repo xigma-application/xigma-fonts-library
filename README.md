@@ -27,18 +27,19 @@ without shipping font binaries or the generator tooling inside the app's own bun
 > font failing never aborts the run (failures land in `.cache/download-failures.json` /
 > `.cache/bake-failures.json`).
 >
-> | Command                          | What it does                                                                                                        |
-> | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-> | **`npm run fonts`**              | **Interactive pipeline UI** — pick steps from a menu, watch them run with live progress                             |
-> | `npm run fonts:catalog`          | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json`                                      |
-> | `npm run fonts:download`         | **Download every source TTF** from the list (no baking)                                                             |
-> | `npm run fonts:bake-all`         | **Bake every atlas** from the list (downloads missing TTFs on the way), then the small caps of fonts that have them |
-> | `npm run fonts:bake-small-caps`  | Re-bake the atlases of fonts with small caps from their full source (`--family X`)                                  |
-> | `npm run fonts:bake-full-glyphs` | Re-bake a family (Inter by default) with every glyph and write its OpenType features file (`--family X`)            |
-> | `npm run fonts:previews`         | Generate the picker preview SVG for every font                                                                      |
-> | `npm run fonts:manifest`         | Rebuild `fonts/manifest.json` (which variants are actually baked)                                                   |
-> | `npm run fonts:serve`            | Local server on `:7720` that bakes a missing atlas on first request                                                 |
-> | `npm run bake`                   | Bake a single variant (`scripts/bake_font.sh`)                                                                      |
+> | Command                           | What it does                                                                                                        |
+> | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+> | **`npm run fonts`**               | **Interactive pipeline UI** — pick steps from a menu, watch them run with live progress                             |
+> | `npm run fonts:catalog`           | Re-fetch the font list from Google Fonts into `data/google-fonts-catalog.json`                                      |
+> | `npm run fonts:download`          | **Download every source TTF** from the list (no baking)                                                             |
+> | `npm run fonts:bake-all`          | **Bake every atlas** from the list (downloads missing TTFs on the way), then the small caps of fonts that have them |
+> | `npm run fonts:bake-small-caps`   | Re-bake the atlases of fonts with small caps from their full source (`--family X`)                                  |
+> | `npm run fonts:bake-full-glyphs`  | Re-bake a family (Inter by default) with every glyph and write its OpenType features file (`--family X`)            |
+> | `npm run fonts:bake-glyph-blocks` | Bake every Unicode glyph block of every baked variant, for the deploy build (`--family X`)                          |
+> | `npm run fonts:previews`          | Generate the picker preview SVG for every font                                                                      |
+> | `npm run fonts:manifest`          | Rebuild `fonts/manifest.json` (which variants are actually baked)                                                   |
+> | `npm run fonts:serve`             | Local server on `:7720` that bakes a missing atlas on first request                                                 |
+> | `npm run bake`                    | Bake a single variant (`scripts/bake_font.sh`)                                                                      |
 
 ## Why this repo exists
 
@@ -317,6 +318,26 @@ Not every variable font shares the same axes — `Roboto[wdth,wght].ttf` has no 
 example, unlike Inter. `scripts/freeze_variable_font.py` now drops a pin for an axis the font
 doesn't have (printing a note to stderr) instead of crashing, so the server's blanket `opsz=14`
 convention pin doesn't break every family that lacks that axis.
+
+## Unicode glyph blocks — characters outside a variant's charset
+
+A variant's atlas holds only its `charset.txt`. Any other character xigma-app needs (é, ©, €, •,
+Korean, Chinese...) comes from a **glyph block**: the 256 code points around it, baked from the same
+static TTF with the atlas's own parameters (`scripts/lib/bakeMsdfAtlas.cjs`: size 64, distance range 6,
+padding 2), so its glyphs share the atlas's baseline and scale:
+
+```
+fonts/<Family>/<variant>/glyphs/<variant>-glyphs-uAC00-msdf.json|png   # U+AC00–U+ACFF
+```
+
+- `scripts/bake_glyph_block.cjs --font <ttf> --block AC00 --out-dir <variant>/glyphs --name <variant>`
+  bakes one block (kerning left out); a block with none of the font's characters is written as
+  `{"chars":[]}` with no texture, so it is not baked again.
+- `scripts/serve.mjs` bakes a block on its first request (the PNG of an empty block is a 404).
+- The font host is static, so `npm run fonts:bake-glyph-blocks [--family X]` bakes every block the
+  font has characters in, ahead, and `scripts/build_deploy.mjs` links each variant's `glyphs/` into
+  `dist/`. Blocks are gitignored like the atlases.
+- Naming lives in `scripts/lib/glyphBlocks.cjs`. Only the Basic Multilingual Plane (u0000–uFF00).
 
 ## `scripts/build_deploy.mjs` — an upload-ready copy for the font host
 

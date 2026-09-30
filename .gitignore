@@ -16,6 +16,7 @@ fonts/*/*/*-msdf.png
 fonts/*/*/*-features.json
 fonts/*/*/source/
 fonts/*/*/charset.txt
+fonts/*/*/glyphs/
 
 # scripts/generate_previews_bundle.py output — every committed preview SVG in one file for the
 # picker, rebuilt from them (and by the deploy build), so it would only duplicate them in git.

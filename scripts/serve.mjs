@@ -10,6 +10,10 @@
  *   GET /fonts/<Family>/<Family>-<weight>[-Italic]/<...>-msdf.json|png — atlas/texture, baked on miss
  *   GET /fonts/<Family>/<Family>[-Italic].svg                         — preview, baked on miss
  *   GET /fonts/<Family>/<variant>/source/<variant>.ttf                — static TTF, from fonts/ or .cache/css-instances/
+ *   GET /fonts/<Family>/<variant>/glyphs/<variant>-glyphs-uXXXX-msdf.json|png
+ *                                                                     — Unicode glyph block, baked on miss from the static TTF
+ *                                                                       (scripts/lib/glyphBlocks.cjs); 404 for the texture of a
+ *                                                                       block the font has no character in
  *
  * Baking on demand needs the family's source variable-font TTF, which isn't in this repo — it's
  * downloaded from google/fonts on first request per family and cached under .cache/ (gitignored),
@@ -30,6 +34,7 @@ import zlib from 'node:zlib';
 
 import { DEV_PORTS } from '@xigma/utils';
 
+import glyphBlocks from './lib/glyphBlocks.cjs';
 import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
 import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
 
@@ -78,6 +83,30 @@ async function bakeVariant(family, weight, italic) {
   execFileSync('bash', [path.join(REPO_ROOT, 'scripts', 'bake_font.sh'), variantDir, sourceTtf, `wght=${weight}`, `opsz=${DEFAULT_OPSZ}`], {
     stdio: 'inherit',
   });
+}
+
+function bakeGlyphBlock(family, variant, blockHex) {
+  const ttf = resolveVariantTtf(FONTS_DIR, CACHE_DIR, family, variant);
+
+  if (ttf) {
+    execFileSync(
+      'node',
+      [
+        path.join(REPO_ROOT, 'scripts', 'bake_glyph_block.cjs'),
+        '--font',
+        ttf,
+        '--block',
+        blockHex,
+        '--out-dir',
+        glyphBlocks.getGlyphBlockDir(FONTS_DIR, family, variant),
+        '--name',
+        variant,
+      ],
+      { stdio: 'inherit' },
+    );
+  }
+
+  return Boolean(ttf);
 }
 
 async function bakePreview(family, italic, name) {
@@ -150,6 +179,26 @@ async function handleFontsRequest(req, res, relativePath) {
 
   if (fs.existsSync(filePath)) {
     sendFile(req, res, filePath);
+    return;
+  }
+
+  const glyphBlockMatch = relativePath.match(glyphBlocks.GLYPH_BLOCK_PATH_PATTERN);
+
+  if (glyphBlockMatch) {
+    const [, family, variant, blockHex] = glyphBlockMatch;
+    const blockJson = path.join(glyphBlocks.getGlyphBlockDir(FONTS_DIR, family, variant), `${variant}-glyphs-u${blockHex}-msdf.json`);
+
+    if (!fs.existsSync(blockJson) && !bakeGlyphBlock(family, variant, blockHex)) {
+      sendError(res, 404, `no source TTF for ${family}/${variant}`);
+      return;
+    }
+
+    if (fs.existsSync(filePath)) {
+      sendFile(req, res, filePath);
+    } else {
+      sendError(res, 404, `no glyphs in block: fonts/${relativePath}`);
+    }
+
     return;
   }
 

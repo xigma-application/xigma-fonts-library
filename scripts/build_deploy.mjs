@@ -9,6 +9,8 @@
  *   dist/fonts/previews.json                                       — every picker preview in one file
  *   dist/fonts/<Family>/<variant>/<variant>-msdf.json|png          — MSDF atlas + texture
  *   dist/fonts/<Family>/<variant>/source/<variant>.ttf             — static TTF for vector outlines
+ *   dist/fonts/<Family>/<variant>/glyphs/*                         — Unicode glyph blocks already baked
+ *                                                                    (npm run fonts:bake-glyph-blocks)
  *
  * Paths are exactly the ones fonts/manifest.json and scripts/serve.mjs use, so a consumer resolves
  * the same `fonts/...` paths against localhost:7720 in development and against the host in
@@ -53,6 +55,15 @@ function linkFile(source, manifestPath) {
   }
 }
 
+function deployGlyphBlocks(variantPath) {
+  const blockDir = path.join(variantPath, 'glyphs');
+  const sourceDir = path.join(REPO_ROOT, blockDir);
+
+  if (fs.existsSync(sourceDir)) {
+    fs.readdirSync(sourceDir).forEach((file) => linkFile(path.join(sourceDir, file), path.join(blockDir, file)));
+  }
+}
+
 function deployWeight(weight) {
   const [, family, variant] = weight.atlas.split(path.sep);
   const ttf = resolveVariantTtf(FONTS_DIR, CACHE_DIR, family, variant);
@@ -63,6 +74,8 @@ function deployWeight(weight) {
   if (ttf) {
     linkFile(ttf, weight.font);
   }
+
+  deployGlyphBlocks(path.dirname(weight.atlas));
 
   return { atlas: weight.atlas, baked: true, font: ttf ? weight.font : null, texture: weight.texture, weight: weight.weight };
 }

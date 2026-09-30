@@ -19,13 +19,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const generateBMFont = require('msdf-bmfont-xml');
 const opentype = require('opentype.js');
 
-const DEFAULT_FONT_SIZE = 64;
-const DEFAULT_DISTANCE_RANGE = 6;
-const DEFAULT_TEXTURE_PADDING = 2;
-const DEFAULT_TEXTURE_SIZE = [2048, 2048];
+const { DEFAULT_TEXTURE_SIZE, bakeMsdfAtlas, writeMsdfAtlas } = require('./lib/bakeMsdfAtlas.cjs');
 
 function parseArgs(argv) {
   const args = {};
@@ -58,48 +54,6 @@ function loadCharset(charsetPath) {
   return fs.readFileSync(charsetPath, 'utf8');
 }
 
-function bakeAtlas(fontPath, charset, name, textureSize) {
-  const opt = {
-    filename: name,
-    outputType: 'json',
-    fieldType: 'msdf',
-    charset,
-    fontSize: DEFAULT_FONT_SIZE,
-    distanceRange: DEFAULT_DISTANCE_RANGE,
-    texturePadding: DEFAULT_TEXTURE_PADDING,
-    textureSize,
-    smartSize: true,
-  };
-
-  return new Promise((resolve, reject) => {
-    generateBMFont(fontPath, opt, (error, textures, font) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve({ textures, font });
-    });
-  });
-}
-
-// msdf-bmfont-xml quirk (confirmed against its source, index.js): the `filename` option only
-// renames the texture page(s) — the BMFont data file is always named after the *input TTF's own
-// filename* (fontPath's basename), never `opt.filename`. xigma-app's own generate:font-atlas
-// script works around this with a shell `mv`; here we just dictate every output filename
-// ourselves from `name`, ignoring what the library returned.
-function writeOutputs(outDir, name, textures, font) {
-  fs.mkdirSync(outDir, { recursive: true });
-
-  textures.forEach((texture, index) => {
-    const suffix = textures.length > 1 ? `.${index}` : '';
-    fs.writeFileSync(path.join(outDir, `${name}${suffix}.png`), texture.texture);
-  });
-
-  const fontExtension = path.extname(font.filename);
-  fs.writeFileSync(path.join(outDir, `${name}${fontExtension}`), font.data);
-}
-
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
@@ -115,9 +69,9 @@ async function main() {
     opentype.Font.prototype.getKerningValue = () => 0;
   }
 
-  const { textures, font } = await bakeAtlas(fontPath, charset, name, textureSize);
+  const { textures, font } = await bakeMsdfAtlas(fontPath, charset, name, textureSize);
 
-  writeOutputs(outDir, name, textures, font);
+  writeMsdfAtlas(outDir, name, textures, font);
 
   console.log(`wrote ${textures.length} texture page(s) + ${name}${path.extname(font.filename)} to ${outDir}`);
 }
