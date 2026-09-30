@@ -24,15 +24,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
 import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
-
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache');
-const DIST_DIR = path.join(REPO_ROOT, 'dist');
-const MANIFEST_PATH = path.join(FONTS_DIR, 'manifest.json');
+import { CACHE_DIR, DIST_DIR, FONTS_DIR, MANIFEST_PATH, REPO_ROOT, getScriptPath } from './lib/repoPaths.mjs';
 
 const HEADERS = `/fonts/*
   Access-Control-Allow-Origin: *
@@ -95,8 +89,8 @@ function deployEntry(entry) {
 }
 
 function main() {
-  execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });
-  execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_previews_bundle.py')], { stdio: 'inherit' });
+  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
+  execFileSync('python3', [getScriptPath('generate_previews_bundle.py')], { stdio: 'inherit' });
   fs.rmSync(DIST_DIR, { force: true, recursive: true });
   fs.mkdirSync(path.join(DIST_DIR, 'fonts'), { recursive: true });
 

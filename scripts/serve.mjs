@@ -29,7 +29,6 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 
 import { DEV_PORTS } from '@xigma/utils';
@@ -37,12 +36,10 @@ import { DEV_PORTS } from '@xigma/utils';
 import glyphBlocks from './lib/glyphBlocks.cjs';
 import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
 import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
+import { CACHE_DIR, FONTS_DIR, getScriptPath } from './lib/repoPaths.mjs';
+import { loadCatalog } from './lib/catalog.mjs';
+import { ensureCharset, getVariantName } from './lib/variants.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache');
-const DEFAULT_CHARSET_PATH = path.join(FONTS_DIR, 'Inter', 'Inter-400', 'charset.txt');
 const DEFAULT_OPSZ = 14; // matches xigma-app's own pin, see README
 
 const ATLAS_PATH_PATTERN = /^([^/]+)\/([^/]+)-(\d{1,4})(-Italic)?\/\2-\3\4-msdf\.(json|png)$/;
@@ -61,26 +58,13 @@ const CONTENT_TYPES = {
 
 const GZIP_EXTENSIONS = new Set(['.json', '.svg']);
 
-function loadCatalog() {
-  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
-}
-
-function ensureCharset(variantDir) {
-  const charsetPath = path.join(variantDir, 'charset.txt');
-
-  if (!fs.existsSync(charsetPath)) {
-    fs.mkdirSync(variantDir, { recursive: true });
-    fs.copyFileSync(DEFAULT_CHARSET_PATH, charsetPath);
-  }
-}
-
 async function bakeVariant(family, weight, italic) {
   const sourceTtf = await ensureSourceTtf(CACHE_DIR, family, italic);
-  const variantDir = path.join(FONTS_DIR, family, `${family}-${weight}${italic ? '-Italic' : ''}`);
+  const variantDir = path.join(FONTS_DIR, family, getVariantName(family, weight, italic));
 
   ensureCharset(variantDir);
 
-  execFileSync('bash', [path.join(REPO_ROOT, 'scripts', 'bake_font.sh'), variantDir, sourceTtf, `wght=${weight}`, `opsz=${DEFAULT_OPSZ}`], {
+  execFileSync('bash', [getScriptPath('bake_font.sh'), variantDir, sourceTtf, `wght=${weight}`, `opsz=${DEFAULT_OPSZ}`], {
     stdio: 'inherit',
   });
 }
@@ -92,7 +76,7 @@ function bakeGlyphBlock(family, variant, blockHex) {
     execFileSync(
       'node',
       [
-        path.join(REPO_ROOT, 'scripts', 'bake_glyph_block.cjs'),
+        getScriptPath('bake_glyph_block.cjs'),
         '--font',
         ttf,
         '--block',
@@ -132,19 +116,13 @@ async function bakePreview(family, italic, name) {
 
     if (!fs.existsSync(staticTtf)) {
       fs.mkdirSync(path.dirname(staticTtf), { recursive: true });
-      execFileSync('python3', [
-        path.join(REPO_ROOT, 'scripts', 'freeze_variable_font.py'),
-        sourceTtf,
-        staticTtf,
-        'wght=400',
-        `opsz=${DEFAULT_OPSZ}`,
-      ]);
+      execFileSync('python3', [getScriptPath('freeze_variable_font.py'), sourceTtf, staticTtf, 'wght=400', `opsz=${DEFAULT_OPSZ}`]);
     }
   }
 
   const outputPath = path.join(FONTS_DIR, family, `${name}.svg`);
 
-  execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'), staticTtf, name, outputPath]);
+  execFileSync('python3', [getScriptPath('generate_preview_svg.py'), staticTtf, name, outputPath]);
 }
 
 function sendFile(req, res, filePath) {
@@ -251,7 +229,7 @@ async function handleFontsRequest(req, res, relativePath) {
 }
 
 function regenerateManifest() {
-  execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });
+  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
 }
 
 async function handleRequest(req, res) {

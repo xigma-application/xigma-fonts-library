@@ -25,28 +25,11 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { ensureInstancedTtf } from './lib/googleFontsCss.mjs';
-
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache');
-const DEFAULT_CHARSET_PATH = path.join(FONTS_DIR, 'Inter', 'Inter-400', 'charset.txt');
-
-function loadCatalog() {
-  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
-}
-
-function ensureCharset(variantDir) {
-  const charsetPath = path.join(variantDir, 'charset.txt');
-
-  if (!fs.existsSync(charsetPath)) {
-    fs.mkdirSync(variantDir, { recursive: true });
-    fs.copyFileSync(DEFAULT_CHARSET_PATH, charsetPath);
-  }
-}
+import { CACHE_DIR, FONTS_DIR, getScriptPath } from './lib/repoPaths.mjs';
+import { loadCatalog } from './lib/catalog.mjs';
+import { ensureCharset, getVariantName } from './lib/variants.mjs';
 
 function isAlreadyBaked(variantDir, variantName) {
   return (
@@ -55,7 +38,7 @@ function isAlreadyBaked(variantDir, variantName) {
 }
 
 async function bakeOne(family, weight, italic) {
-  const variantName = `${family}-${weight}${italic ? '-Italic' : ''}`;
+  const variantName = getVariantName(family, weight, italic);
   const variantDir = path.join(FONTS_DIR, family, variantName);
 
   if (isAlreadyBaked(variantDir, variantName)) {
@@ -67,7 +50,7 @@ async function bakeOne(family, weight, italic) {
   ensureCharset(variantDir);
 
   execFileSync('node', [
-    path.join(REPO_ROOT, 'scripts', 'bake_atlas.cjs'),
+    getScriptPath('bake_atlas.cjs'),
     '--font',
     ttfPath,
     '--charset',
@@ -129,10 +112,10 @@ async function main() {
 
   if (!process.argv.includes('--without-small-caps')) {
     console.log('');
-    execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'bake_small_caps.mjs')], { stdio: 'inherit' });
+    execFileSync('node', [getScriptPath('bake_small_caps.mjs')], { stdio: 'inherit' });
   }
 
-  execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });
+  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
 }
 
 main();

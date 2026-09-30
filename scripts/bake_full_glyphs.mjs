@@ -21,13 +21,11 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { CACHE_DIR, FONTS_DIR, FULL_GLYPHS_PATH, getScriptPath } from './lib/repoPaths.mjs';
+import { loadCatalog, loadFamilySet } from './lib/catalog.mjs';
+import { getVariantName } from './lib/variants.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const FULL_GLYPHS_PATH = path.join(REPO_ROOT, 'data', 'full-glyphs.json');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache', 'full-glyphs');
+const FULL_GLYPHS_CACHE_DIR = path.join(CACHE_DIR, 'full-glyphs');
 const DEFAULT_FAMILIES = ['Inter'];
 const TEXTURE_SIZE = '4096';
 
@@ -37,16 +35,12 @@ function parseFamilies(argv) {
   return families.length > 0 ? families : DEFAULT_FAMILIES;
 }
 
-function loadFullGlyphs() {
-  return new Set(fs.existsSync(FULL_GLYPHS_PATH) ? JSON.parse(fs.readFileSync(FULL_GLYPHS_PATH, 'utf8')) : []);
-}
-
 function saveFullGlyphs(fullGlyphs) {
   fs.writeFileSync(FULL_GLYPHS_PATH, `${JSON.stringify([...fullGlyphs].sort(), null, 2)}\n`);
 }
 
 function ensureOriginalTtf(variant, staticTtf) {
-  const original = path.join(CACHE_DIR, 'originals', `${variant}.ttf`);
+  const original = path.join(FULL_GLYPHS_CACHE_DIR, 'originals', `${variant}.ttf`);
 
   if (!fs.existsSync(original)) {
     fs.mkdirSync(path.dirname(original), { recursive: true });
@@ -57,24 +51,24 @@ function ensureOriginalTtf(variant, staticTtf) {
 }
 
 function bakeVariant(family, weight, italic) {
-  const variant = `${family}-${weight}${italic ? '-Italic' : ''}`;
+  const variant = getVariantName(family, weight, italic);
   const variantDir = path.join(FONTS_DIR, family, variant);
   const staticTtf = path.join(variantDir, 'source', `${variant}.ttf`);
-  const charset = path.join(CACHE_DIR, 'charsets', `${variant}.txt`);
+  const charset = path.join(FULL_GLYPHS_CACHE_DIR, 'charsets', `${variant}.txt`);
 
-  if (!fs.existsSync(staticTtf) && !fs.existsSync(path.join(CACHE_DIR, 'originals', `${variant}.ttf`))) {
+  if (!fs.existsSync(staticTtf) && !fs.existsSync(path.join(FULL_GLYPHS_CACHE_DIR, 'originals', `${variant}.ttf`))) {
     throw new Error(`${staticTtf} not found — bake the variant first (npm run fonts:bake-all)`);
   }
 
   execFileSync('python3', [
-    path.join(REPO_ROOT, 'scripts', 'build_full_glyph_ttf.py'),
+    getScriptPath('build_full_glyph_ttf.py'),
     ensureOriginalTtf(variant, staticTtf),
     staticTtf,
     charset,
     path.join(variantDir, `${variant}-features.json`),
   ]);
   execFileSync('node', [
-    path.join(REPO_ROOT, 'scripts', 'bake_atlas.cjs'),
+    getScriptPath('bake_atlas.cjs'),
     '--font',
     staticTtf,
     '--charset',
@@ -94,9 +88,9 @@ function bakeVariant(family, weight, italic) {
 
 function main() {
   const families = parseFamilies(process.argv.slice(2));
-  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  const catalog = loadCatalog();
   const entries = catalog.filter(({ family }) => families.includes(family));
-  const fullGlyphs = loadFullGlyphs();
+  const fullGlyphs = loadFamilySet(FULL_GLYPHS_PATH);
   const variants = entries.flatMap(({ family, italic, weights }) => weights.map((weight) => ({ family, italic, weight })));
 
   variants.forEach(({ family, italic, weight }, index) => {
@@ -107,7 +101,7 @@ function main() {
     console.log(`[${index + 1}/${variants.length}] baked every glyph of ${variant}`);
   });
 
-  execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });
+  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
 }
 
 main();

@@ -13,17 +13,13 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import glyphBlocks from './lib/glyphBlocks.cjs';
 import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
+import { CACHE_DIR, FONTS_DIR, getScriptPath } from './lib/repoPaths.mjs';
 
 const require = createRequire(import.meta.url);
 const opentype = require('opentype.js');
-
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache');
 
 function listVariants(family) {
   const families = family ? [family] : fs.readdirSync(FONTS_DIR).filter((name) => fs.statSync(path.join(FONTS_DIR, name)).isDirectory());
@@ -51,17 +47,7 @@ function bakeVariantBlocks({ family, variant }) {
     .forEach((blockStart) => {
       execFileSync(
         'node',
-        [
-          path.join(REPO_ROOT, 'scripts', 'bake_glyph_block.cjs'),
-          '--font',
-          ttf,
-          '--block',
-          blockStart.toString(16),
-          '--out-dir',
-          outDir,
-          '--name',
-          variant,
-        ],
+        [getScriptPath('bake_glyph_block.cjs'), '--font', ttf, '--block', blockStart.toString(16), '--out-dir', outDir, '--name', variant],
         { stdio: ['ignore', 'inherit', 'ignore'] },
       );
     });

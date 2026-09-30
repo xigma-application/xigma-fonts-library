@@ -16,16 +16,7 @@ const opentype = require('opentype.js');
 
 const { bakeMsdfAtlas, writeMsdfAtlas } = require('./lib/bakeMsdfAtlas.cjs');
 const { GLYPH_BLOCK_SIZE, getGlyphBlockName } = require('./lib/glyphBlocks.cjs');
-
-function parseArgs(argv) {
-  const args = {};
-
-  for (let i = 0; i < argv.length; i += 2) {
-    args[argv[i].replace(/^--/, '')] = argv[i + 1];
-  }
-
-  return args;
-}
+const { parseArgs, requireArg } = require('./lib/parseArgs.cjs');
 
 function getBlockCharset(font, blockStart) {
   const glyphIndexMap = font.tables.cmap.glyphIndexMap;
@@ -61,10 +52,11 @@ async function bakeGlyphBlock(fontPath, blockStart, outDir, variant) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const blockStart = parseInt(args.block, 16);
-  const count = await bakeGlyphBlock(args.font, blockStart, args['out-dir'], args.name);
+  const blockStart = parseInt(requireArg(args, 'block'), 16);
+  const name = requireArg(args, 'name');
+  const count = await bakeGlyphBlock(requireArg(args, 'font'), blockStart, requireArg(args, 'out-dir'), name);
 
-  console.log(`${getGlyphBlockName(args.name, blockStart)}: ${count} glyph(s)`);
+  console.log(`${getGlyphBlockName(name, blockStart)}: ${count} glyph(s)`);
 }
 
 main().catch((error) => {

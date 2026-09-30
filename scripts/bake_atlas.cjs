@@ -22,33 +22,7 @@ const path = require('path');
 const opentype = require('opentype.js');
 
 const { DEFAULT_TEXTURE_SIZE, bakeMsdfAtlas, writeMsdfAtlas } = require('./lib/bakeMsdfAtlas.cjs');
-
-function parseArgs(argv) {
-  const args = {};
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-
-    if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      const value = argv[i + 1];
-      args[key] = value;
-      i += 1;
-    }
-  }
-
-  return args;
-}
-
-function requireArg(args, key) {
-  const value = args[key];
-
-  if (!value) {
-    throw new Error(`missing required --${key}`);
-  }
-
-  return value;
-}
+const { parseArgs, requireArg } = require('./lib/parseArgs.cjs');
 
 function loadCharset(charsetPath) {
   return fs.readFileSync(charsetPath, 'utf8');

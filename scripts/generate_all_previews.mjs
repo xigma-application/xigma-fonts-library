@@ -26,21 +26,15 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { CACHE_DIR, FONTS_DIR, REPO_ROOT, getScriptPath } from './lib/repoPaths.mjs';
+import { loadCatalog } from './lib/catalog.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache', 'preview-sources');
+const PREVIEW_SOURCES_DIR = path.join(CACHE_DIR, 'preview-sources');
 
 // Old/unrecognized browsers get served a plain .ttf; modern ones get .woff2 — this is the
 // well-known trick for pulling a raw TTF straight out of Google's CSS API.
 const OLD_BROWSER_USER_AGENT = 'Mozilla/4.0';
 const TTF_URL_PATTERN = /url\((https:\/\/fonts\.gstatic\.com\/[^)]+\.ttf)\)/;
-
-function loadCatalog() {
-  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
-}
 
 function previewPath(family, name) {
   return path.join(FONTS_DIR, family, `${name}.svg`);
@@ -66,7 +60,7 @@ async function fetchRegularTtfUrl(family, italic) {
 }
 
 async function ensureRegularTtf(family, italic) {
-  const cachedPath = path.join(CACHE_DIR, `${family}${italic ? '-Italic' : ''}.ttf`);
+  const cachedPath = path.join(PREVIEW_SOURCES_DIR, `${family}${italic ? '-Italic' : ''}.ttf`);
 
   if (!fs.existsSync(cachedPath)) {
     const ttfUrl = await fetchRegularTtfUrl(family, italic);
@@ -94,7 +88,7 @@ async function generateOne(entry) {
 
   const ttfPath = await ensureRegularTtf(entry.family, entry.italic);
 
-  execFileSync('python3', [path.join(REPO_ROOT, 'scripts', 'generate_preview_svg.py'), ttfPath, entry.name, outputPath]);
+  execFileSync('python3', [getScriptPath('generate_preview_svg.py'), ttfPath, entry.name, outputPath]);
 
   return 'generated';
 }

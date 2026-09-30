@@ -29,27 +29,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// Resolved relative to this file, not process.cwd() — bake_font.sh may invoke this from anywhere.
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const MANIFEST_PATH = path.join(FONTS_DIR, 'manifest.json');
-const SMALL_CAPS_PATH = path.join(REPO_ROOT, 'data', 'small-caps.json');
-const FULL_GLYPHS_PATH = path.join(REPO_ROOT, 'data', 'full-glyphs.json');
+import { FONTS_DIR, FULL_GLYPHS_PATH, MANIFEST_PATH, SMALL_CAPS_PATH } from './lib/repoPaths.mjs';
+import { loadCatalog, loadFamilySet } from './lib/catalog.mjs';
+import { getVariantName } from './lib/variants.mjs';
 
 // Explicit locale + base sensitivity: case and accents don't affect ordering, and it's
 // deterministic regardless of the runtime's default ICU locale, unlike a bare a.localeCompare(b).
 const alphabetically = (a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' });
-
-function loadCatalog() {
-  if (!fs.existsSync(CATALOG_PATH)) {
-    throw new Error(`${CATALOG_PATH} not found — run scripts/fetch_google_fonts_catalog.mjs first`);
-  }
-
-  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
-}
 
 // Paths in the manifest are rooted at "fonts/", not at fonts/manifest.json's own directory — a
 // consumer resolves them against the repo (or wherever fonts/ was published), not against wherever
@@ -58,22 +44,8 @@ function toManifestPath(...segments) {
   return path.join('fonts', ...segments);
 }
 
-// Mirrors the exact convention scripts/bake_font.sh writes to: variant dir name is
-// `<family>-<weight>[-Italic]`, its outputs are `<variant>-msdf.{json,png}` inside it.
-function variantDirName(family, weight, italic) {
-  return `${family}-${weight}${italic ? '-Italic' : ''}`;
-}
-
-function loadSmallCaps() {
-  return new Set(fs.existsSync(SMALL_CAPS_PATH) ? JSON.parse(fs.readFileSync(SMALL_CAPS_PATH, 'utf8')) : []);
-}
-
-function loadFullGlyphs() {
-  return new Set(fs.existsSync(FULL_GLYPHS_PATH) ? JSON.parse(fs.readFileSync(FULL_GLYPHS_PATH, 'utf8')) : []);
-}
-
 function resolveWeightPaths(family, weight, italic, smallCaps, fullGlyphs) {
-  const variant = variantDirName(family, weight, italic);
+  const variant = getVariantName(family, weight, italic);
   const baseName = `${variant}-msdf`;
 
   const atlas = toManifestPath(family, variant, `${baseName}.json`);
@@ -95,8 +67,8 @@ function resolvePreviewPath(family, name) {
 }
 
 function buildManifest(catalog) {
-  const smallCaps = loadSmallCaps();
-  const fullGlyphs = loadFullGlyphs();
+  const smallCaps = loadFamilySet(SMALL_CAPS_PATH);
+  const fullGlyphs = loadFamilySet(FULL_GLYPHS_PATH);
 
   return catalog
     .map(({ name, family, italic, weights }) => ({

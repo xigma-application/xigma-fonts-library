@@ -16,10 +16,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { CATALOG_PATH } from './lib/repoPaths.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const OUTPUT_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
 const METADATA_URL = 'https://fonts.google.com/metadata/fonts';
 const STYLE_KEY_PATTERN = /^(\d{1,4})(i)?$/;
 
@@ -90,9 +88,9 @@ async function main() {
   const metadata = await fetchMetadata();
   const catalog = buildCatalog(metadata);
 
-  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-  fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(catalog, null, 2)}\n`);
-  console.log(`wrote ${catalog.length} catalog entries to ${OUTPUT_PATH}`);
+  fs.mkdirSync(path.dirname(CATALOG_PATH), { recursive: true });
+  fs.writeFileSync(CATALOG_PATH, `${JSON.stringify(catalog, null, 2)}\n`);
+  console.log(`wrote ${catalog.length} catalog entries to ${CATALOG_PATH}`);
 }
 
 main().catch((error) => {

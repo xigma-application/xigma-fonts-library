@@ -13,21 +13,16 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { ensureInstancedTtf } from './lib/googleFontsCss.mjs';
+import { CACHE_DIR } from './lib/repoPaths.mjs';
+import { loadCatalog } from './lib/catalog.mjs';
+import { getVariantName } from './lib/variants.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache');
 const CONCURRENCY = 8;
 
-function loadCatalog() {
-  return JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
-}
-
 function getCachedTtfPath(family, weight, italic) {
-  return path.join(CACHE_DIR, 'css-instances', family, `${family}-${weight}${italic ? '-Italic' : ''}.ttf`);
+  return path.join(CACHE_DIR, 'css-instances', family, `${getVariantName(family, weight, italic)}.ttf`);
 }
 
 function flattenJobs(catalog) {

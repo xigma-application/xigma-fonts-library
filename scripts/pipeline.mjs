@@ -16,7 +16,6 @@
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import readline from 'node:readline';
-import { fileURLToPath } from 'node:url';
 
 import { cancel, intro, isCancel, multiselect, outro } from '@clack/prompts';
 
@@ -32,8 +31,8 @@ import {
   paint,
   progressBar,
 } from './lib/terminalUi.mjs';
+import { REPO_ROOT } from './lib/repoPaths.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const FRAME_MS = 80;
 const LABEL_WIDTH = 15;
 const BAR_WIDTH = 28;

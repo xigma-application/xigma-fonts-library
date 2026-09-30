@@ -23,39 +23,20 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { ensureWeightSourceTtf } from './lib/googleFontsSource.mjs';
+import { CACHE_DIR, FONTS_DIR, SMALL_CAPS_PATH, getScriptPath } from './lib/repoPaths.mjs';
+import { loadCatalog, loadFamilySet } from './lib/catalog.mjs';
+import { ensureCharset, getVariantName } from './lib/variants.mjs';
 
-const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const FONTS_DIR = path.join(REPO_ROOT, 'fonts');
-const CATALOG_PATH = path.join(REPO_ROOT, 'data', 'google-fonts-catalog.json');
-const SMALL_CAPS_PATH = path.join(REPO_ROOT, 'data', 'small-caps.json');
-const CACHE_DIR = path.join(REPO_ROOT, '.cache');
-const DEFAULT_CHARSET_PATH = path.join(FONTS_DIR, 'Inter', 'Inter-400', 'charset.txt');
 const NO_SMALL_CAPS_EXIT_CODE = 3;
 
 function parseFamilies(argv) {
   return argv.flatMap((arg, index) => (arg === '--family' && argv[index + 1] ? [argv[index + 1]] : []));
 }
 
-function loadSmallCaps() {
-  return new Set(fs.existsSync(SMALL_CAPS_PATH) ? JSON.parse(fs.readFileSync(SMALL_CAPS_PATH, 'utf8')) : []);
-}
-
 function saveSmallCaps(smallCaps) {
   fs.writeFileSync(SMALL_CAPS_PATH, `${JSON.stringify([...smallCaps].sort(), null, 2)}\n`);
-}
-
-function ensureCharset(variantDir) {
-  const charsetPath = path.join(variantDir, 'charset.txt');
-
-  if (!fs.existsSync(charsetPath)) {
-    fs.mkdirSync(variantDir, { recursive: true });
-    fs.copyFileSync(DEFAULT_CHARSET_PATH, charsetPath);
-  }
-
-  return charsetPath;
 }
 
 function isAlreadyBaked(smallCaps, variantDir, variant) {
@@ -63,20 +44,13 @@ function isAlreadyBaked(smallCaps, variantDir, variant) {
 }
 
 function bakeVariant(sourceTtf, family, weight, italic) {
-  const variant = `${family}-${weight}${italic ? '-Italic' : ''}`;
+  const variant = getVariantName(family, weight, italic);
   const variantDir = path.join(FONTS_DIR, family, variant);
   const staticTtf = path.join(variantDir, 'source', `${variant}.ttf`);
   const bakeCharset = path.join(CACHE_DIR, 'small-caps', `${variant}.txt`);
   const build = spawnSync(
     'python3',
-    [
-      path.join(REPO_ROOT, 'scripts', 'build_small_caps_ttf.py'),
-      sourceTtf,
-      staticTtf,
-      ensureCharset(variantDir),
-      bakeCharset,
-      `wght=${weight}`,
-    ],
+    [getScriptPath('build_small_caps_ttf.py'), sourceTtf, staticTtf, ensureCharset(variantDir), bakeCharset, `wght=${weight}`],
     { encoding: 'utf8' },
   );
 
@@ -89,7 +63,7 @@ function bakeVariant(sourceTtf, family, weight, italic) {
   }
 
   execFileSync('node', [
-    path.join(REPO_ROOT, 'scripts', 'bake_atlas.cjs'),
+    getScriptPath('bake_atlas.cjs'),
     '--font',
     staticTtf,
     '--charset',
@@ -105,7 +79,7 @@ function bakeVariant(sourceTtf, family, weight, italic) {
 
 async function bakeEntry(entry, smallCaps) {
   const pending = entry.weights.filter((weight) => {
-    const variant = `${entry.family}-${weight}${entry.italic ? '-Italic' : ''}`;
+    const variant = getVariantName(entry.family, weight, entry.italic);
 
     return !isAlreadyBaked(smallCaps, path.join(FONTS_DIR, entry.family, variant), variant);
   });
@@ -135,10 +109,10 @@ async function bakeEntry(entry, smallCaps) {
 
 async function main() {
   const families = parseFamilies(process.argv.slice(2));
-  const catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  const catalog = loadCatalog();
   const entries =
     families.length > 0 ? catalog.filter(({ family, name }) => families.includes(family) || families.includes(name)) : catalog;
-  const smallCaps = loadSmallCaps();
+  const smallCaps = loadFamilySet(SMALL_CAPS_PATH);
   const failures = [];
   const counts = { baked: 0, none: 0, skipped: 0 };
 
@@ -172,7 +146,7 @@ async function main() {
     console.log(`failure details: ${failuresPath}`);
   }
 
-  execFileSync('node', [path.join(REPO_ROOT, 'scripts', 'generate_manifest.mjs')], { stdio: 'inherit' });
+  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
 }
 
 main();

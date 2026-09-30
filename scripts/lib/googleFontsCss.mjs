@@ -11,6 +11,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { getVariantName } from './variants.mjs';
+
 const OLD_BROWSER_USER_AGENT = 'Mozilla/4.0';
 const TTF_URL_PATTERN = /url\((https:\/\/fonts\.gstatic\.com\/[^)]+\.ttf)\)/;
 
@@ -34,7 +36,7 @@ async function fetchInstancedTtfUrl(family, weight, italic) {
 }
 
 export async function ensureInstancedTtf(cacheDir, family, weight, italic) {
-  const cachedPath = path.join(cacheDir, 'css-instances', family, `${family}-${weight}${italic ? '-Italic' : ''}.ttf`);
+  const cachedPath = path.join(cacheDir, 'css-instances', family, `${getVariantName(family, weight, italic)}.ttf`);
 
   if (!fs.existsSync(cachedPath)) {
     const ttfUrl = await fetchInstancedTtfUrl(family, weight, italic);
