@@ -337,7 +337,9 @@ fonts/<Family>/<variant>/glyphs/<variant>-glyphs-uAC00-msdf.json|png   # U+AC00�
 - The font host is static, so `npm run fonts:bake-glyph-blocks [--family X]` bakes every block the
   font has characters in, ahead, and `scripts/build_deploy.mjs` links each variant's `glyphs/` into
   `dist/`. Blocks are gitignored like the atlases.
-- Naming lives in `scripts/lib/glyphBlocks.cjs`. Only the Basic Multilingual Plane (u0000–uFF00).
+- Naming lives in `scripts/lib/glyphBlocks.cjs`. Every plane is covered (u0000–u10FF00, at least four hex
+  digits: U+1D400 → u1D400); msdf-bmfont-xml writes a glyph's `id` with `charCodeAt`, so
+  `bake_glyph_block.cjs` rewrites it from the glyph's `char` for characters past U+FFFF.
 
 ## `scripts/build_deploy.mjs` — an upload-ready copy for the font host
 

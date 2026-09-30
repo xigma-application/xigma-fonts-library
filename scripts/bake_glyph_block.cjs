@@ -23,8 +23,19 @@ function getBlockCharset(font, blockStart) {
 
   return Array.from({ length: GLYPH_BLOCK_SIZE }, (_, offset) => blockStart + offset)
     .filter((code) => glyphIndexMap[code] > 0)
-    .map((code) => String.fromCharCode(code))
+    .map((code) => String.fromCodePoint(code))
     .join('');
+}
+
+// msdf-bmfont-xml writes each glyph's `id` as `char.charCodeAt(0)`, which is only the high surrogate
+// of a character past U+FFFF — rewrite it from the glyph's own `char`.
+function fixAstralIds(atlasPath) {
+  const atlas = JSON.parse(fs.readFileSync(atlasPath, 'utf8'));
+
+  atlas.chars.forEach((glyph) => {
+    glyph.id = glyph.char.codePointAt(0);
+  });
+  fs.writeFileSync(atlasPath, JSON.stringify(atlas));
 }
 
 async function bakeGlyphBlock(fontPath, blockStart, outDir, variant) {
@@ -46,8 +57,9 @@ async function bakeGlyphBlock(fontPath, blockStart, outDir, variant) {
   }
 
   writeMsdfAtlas(outDir, name, textures, font);
+  fixAstralIds(path.join(outDir, `${name}.json`));
 
-  return charset.length;
+  return Array.from(charset).length;
 }
 
 async function main() {
