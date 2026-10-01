@@ -189,7 +189,7 @@ function renderHeader(startedAt, now) {
 
 function runStep(state, onLine) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(REPO_ROOT, 'scripts', state.step.script), ...(state.step.args ?? [])], {
+    const child = spawn(process.execPath, [state.step.script, ...(state.step.args ?? [])], {
       cwd: REPO_ROOT,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -295,9 +295,9 @@ function printOutro({ states, took }) {
 
 function runPlain(stepIds) {
   for (const step of PIPELINE_STEPS.filter((candidate) => stepIds.includes(candidate.id))) {
-    console.log(`\n== ${step.label} (${step.script})`);
+    console.log(`\n== ${step.label} (${path.basename(step.script)})`);
 
-    const { status } = spawnSync(process.execPath, [path.join(REPO_ROOT, 'scripts', step.script), ...(step.args ?? [])], {
+    const { status } = spawnSync(process.execPath, [step.script, ...(step.args ?? [])], {
       cwd: REPO_ROOT,
       stdio: 'inherit',
     });

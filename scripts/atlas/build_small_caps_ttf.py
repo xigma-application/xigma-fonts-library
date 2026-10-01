@@ -4,7 +4,7 @@ Build a static TTF whose small caps are reachable by codepoint, for baking them 
 
 msdf-bmfont-xml bakes characters, not glyphs, so a font's small caps (the glyphs its OpenType `smcp`
 feature substitutes for lower case letters) can't be baked as they are. This freezes the source
-variable font to one weight like scripts/freeze_variable_font.py, then maps every small cap of a
+variable font to one weight like scripts/atlas/freeze_variable_font.py, then maps every small cap of a
 charset character to a Private Use Area codepoint, U+E000 + the character's own codepoint (so the
 small cap of "a", U+0061, is U+E061). A consumer drawing small caps swaps each lower case character
 for that codepoint. The PUA characters are appended to the written charset so the atlas bakes them.
@@ -12,7 +12,7 @@ for that codepoint. The PUA characters are appended to the written charset so th
 Exits with code 3, writing nothing, when the source font has no `smcp` feature.
 
 Usage:
-  python scripts/build_small_caps_ttf.py <source.ttf> <output.ttf> <charset.txt> <output-charset.txt> wght=700
+  python scripts/atlas/build_small_caps_ttf.py <source.ttf> <output.ttf> <charset.txt> <output-charset.txt> wght=700
 """
 
 import argparse
@@ -20,61 +20,44 @@ import sys
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-from fontTools.varLib import instancer
+
+from font_tables import get_features, parse_axis_args, pin_axes, unwrap_subtable
 
 SMALL_CAPS_PUA_BASE = 0xE000
 SMALL_CAPS_PUA_LIMIT = 0xF8FF
+SINGLE_SUBSTITUTION = 1
+# bake_small_caps.mjs tells "no small caps" apart from a failure by this exit code.
 NO_SMALL_CAPS_EXIT_CODE = 3
 
 
-def parse_axis_args(axis_args: list[str]) -> dict[str, float]:
-    return {tag: float(value) for tag, _, value in (arg.partition("=") for arg in axis_args)}
-
-
-def get_small_caps_mapping(font: TTFont) -> dict[str, str]:
-    if "GSUB" not in font or not font["GSUB"].table.FeatureList:
-        return {}
-
-    gsub = font["GSUB"].table
-    lookup_indices = {
-        index
-        for record in gsub.FeatureList.FeatureRecord
-        if record.FeatureTag == "smcp"
-        for index in record.Feature.LookupListIndex
-    }
+def get_small_caps_mapping(font: TTFont, lookup_indices: list[int]) -> dict[str, str]:
+    """Each glyph's small cap, from the single substitutions of the `smcp` lookups."""
     mapping: dict[str, str] = {}
 
-    for index in sorted(lookup_indices):
-        lookup = gsub.LookupList.Lookup[index]
+    for index in lookup_indices:
+        lookup = font["GSUB"].table.LookupList.Lookup[index]
 
-        for subtable in lookup.SubTable:
-            single = subtable.ExtSubTable if lookup.LookupType == 7 else subtable
+        for raw_subtable in lookup.SubTable:
+            subtable, lookup_type = unwrap_subtable(raw_subtable, lookup.LookupType, "GSUB")
 
-            if getattr(single, "LookupType", lookup.LookupType) == 1 and hasattr(single, "mapping"):
-                for source, target in single.mapping.items():
+            if lookup_type == SINGLE_SUBSTITUTION:
+                for source, target in subtable.mapping.items():
                     mapping.setdefault(source, target)
 
     return mapping
 
 
-def has_small_caps(font: TTFont) -> bool:
-    if "GSUB" not in font or not font["GSUB"].table.FeatureList:
-        return False
-
-    return any(record.FeatureTag == "smcp" for record in font["GSUB"].table.FeatureList.FeatureRecord)
-
-
 def build_small_caps_ttf(source: Path, output: Path, charset_path: Path, output_charset: Path, axes: dict[str, float]) -> int:
     font = TTFont(source)
+    smcp_lookups = get_features(font, "GSUB").get("smcp")
 
-    if not has_small_caps(font):
+    if smcp_lookups is None:
         return 0
 
     if "fvar" in font:
-        available_tags = {axis.axisTag for axis in font["fvar"].axes}
-        instancer.instantiateVariableFont(font, {tag: value for tag, value in axes.items() if tag in available_tags}, inplace=True)
+        pin_axes(font, axes)
 
-    mapping = get_small_caps_mapping(font)
+    mapping = get_small_caps_mapping(font, smcp_lookups)
     best_cmap = font.getBestCmap()
     charset = charset_path.read_text(encoding="utf8")
     small_caps: dict[int, str] = {}

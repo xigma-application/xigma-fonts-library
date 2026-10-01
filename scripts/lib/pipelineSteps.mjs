@@ -1,5 +1,6 @@
 /**
- * The steps scripts/pipeline.mjs can run, each one an existing script run as a child process.
+ * The steps scripts/pipeline.mjs can run, each one an existing script (its path, from SCRIPTS) run as a
+ * child process.
  * `parse` turns one line of that script's output into a progress update, so the pipeline UI can
  * draw a live progress bar without the scripts knowing anything about it. `args` are passed to the
  * script.
@@ -10,6 +11,8 @@
  * - `count`: the script logs `[i/N]` only for items it actually processes (in any order, when
  *   concurrent), so progress is the number of lines seen on top of what was already there.
  */
+
+import { SCRIPTS } from './repoPaths.mjs';
 
 const PROGRESS_LINE = /^\[(\d+)\/(\d+)\] (FAILED|[a-z]+): (.+?)(?: — (.+))?$/;
 
@@ -40,7 +43,7 @@ export const PIPELINE_STEPS = [
 
       return match ? { summary: `${match[1]} fonts in the list` } : null;
     },
-    script: 'fetch_google_fonts_catalog.mjs',
+    script: SCRIPTS.fetchGoogleFontsCatalog,
   },
   {
     defaultSelected: true,
@@ -57,7 +60,7 @@ export const PIPELINE_STEPS = [
 
       return parseProgressLine(line) ?? parseDoneLine(line);
     },
-    script: 'download_all_fonts.mjs',
+    script: SCRIPTS.downloadAllFonts,
   },
   {
     args: ['--without-small-caps'],
@@ -75,7 +78,7 @@ export const PIPELINE_STEPS = [
 
       return parseProgressLine(line) ?? parseDoneLine(line);
     },
-    script: 'bake_all_fonts.mjs',
+    script: SCRIPTS.bakeAllFonts,
   },
   {
     defaultSelected: true,
@@ -92,7 +95,7 @@ export const PIPELINE_STEPS = [
 
       return parseProgressLine(line) ?? parseDoneLine(line);
     },
-    script: 'bake_small_caps.mjs',
+    script: SCRIPTS.bakeSmallCaps,
   },
   {
     defaultSelected: false,
@@ -101,7 +104,7 @@ export const PIPELINE_STEPS = [
     label: 'Preview SVGs',
     mode: 'index',
     parse: (line) => parseProgressLine(line) ?? parseDoneLine(line),
-    script: 'generate_all_previews.mjs',
+    script: SCRIPTS.generateAllPreviews,
   },
   {
     defaultSelected: true,
@@ -113,6 +116,6 @@ export const PIPELINE_STEPS = [
 
       return match ? { summary: `${match[1]} fonts, ${match[2]} baked` } : null;
     },
-    script: 'generate_manifest.mjs',
+    script: SCRIPTS.generateManifest,
   },
 ];

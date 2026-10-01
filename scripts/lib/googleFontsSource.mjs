@@ -1,7 +1,7 @@
 /**
  * Shared "find and download a family's source variable-font TTF from google/fonts, with a local
- * disk cache" logic — used by scripts/serve.mjs (bake-on-miss), scripts/generate_all_previews.mjs
- * (batch preview generation) and scripts/bake_small_caps.mjs, so they don't drift.
+ * disk cache" logic — used by scripts/serve.mjs (bake-on-miss), scripts/previews/generate_all_previews.mjs
+ * (batch preview generation) and scripts/atlas/bake_small_caps.mjs, so they don't drift.
  *
  * The file listing of every family comes from the google/fonts git trees (one request per license
  * folder, cached per family in .cache/index/), so going through the whole catalog stays well under
@@ -11,9 +11,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const ENV_PATH = path.join(path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url)))), '.env');
+import { CACHE_DIR, REPO_ROOT } from './repoPaths.mjs';
+
+const ENV_PATH = path.join(REPO_ROOT, '.env');
 
 if (fs.existsSync(ENV_PATH)) {
   process.loadEnvFile(ENV_PATH);
@@ -77,8 +78,8 @@ async function buildFamilyIndex(indexDir) {
   fs.writeFileSync(path.join(indexDir, INDEX_COMPLETE_MARKER), '');
 }
 
-export async function listFamilyFiles(cacheDir, family) {
-  const indexDir = path.join(cacheDir, 'index');
+export async function listFamilyFiles(family) {
+  const indexDir = path.join(CACHE_DIR, 'index');
   const cachePath = path.join(indexDir, `${familySlug(family)}.json`);
 
   if (!fs.existsSync(cachePath) && !fs.existsSync(path.join(indexDir, INDEX_COMPLETE_MARKER))) {
@@ -119,8 +120,8 @@ export function pickStaticFileName(fileNames, weight, italic) {
   return fileNames.find((name) => name.endsWith(`-${suffix}.ttf`));
 }
 
-async function ensureFamilyFile(cacheDir, family, licenseDir, fileName) {
-  const cachedPath = path.join(cacheDir, 'sources', familySlug(family), fileName);
+async function ensureFamilyFile(family, licenseDir, fileName) {
+  const cachedPath = path.join(CACHE_DIR, 'sources', familySlug(family), fileName);
 
   if (!fs.existsSync(cachedPath)) {
     const url = `https://raw.githubusercontent.com/google/fonts/main/${licenseDir}/${familySlug(family)}/${encodeURIComponent(fileName)}`;
@@ -139,8 +140,8 @@ async function ensureFamilyFile(cacheDir, family, licenseDir, fileName) {
   return cachedPath;
 }
 
-export async function ensureSourceTtf(cacheDir, family, italic) {
-  const { licenseDir, fileNames } = await listFamilyFiles(cacheDir, family);
+export async function ensureSourceTtf(family, italic) {
+  const { licenseDir, fileNames } = await listFamilyFiles(family);
   const fileName = pickVariableFileName(fileNames, italic);
 
   if (!fileName) {
@@ -150,7 +151,7 @@ export async function ensureSourceTtf(cacheDir, family, italic) {
     );
   }
 
-  return ensureFamilyFile(cacheDir, family, licenseDir, fileName);
+  return ensureFamilyFile(family, licenseDir, fileName);
 }
 
 /**
@@ -158,9 +159,9 @@ export async function ensureSourceTtf(cacheDir, family, italic) {
  * otherwise its static file for that weight (`<Family>-Bold.ttf`, `<Family>-LightItalic.ttf`...).
  * Returns null when google/fonts has neither.
  */
-export async function ensureWeightSourceTtf(cacheDir, family, weight, italic) {
-  const { licenseDir, fileNames } = await listFamilyFiles(cacheDir, family);
+export async function ensureWeightSourceTtf(family, weight, italic) {
+  const { licenseDir, fileNames } = await listFamilyFiles(family);
   const fileName = pickVariableFileName(fileNames, italic) ?? pickStaticFileName(fileNames, weight, italic);
 
-  return fileName ? ensureFamilyFile(cacheDir, family, licenseDir, fileName) : null;
+  return fileName ? ensureFamilyFile(family, licenseDir, fileName) : null;
 }

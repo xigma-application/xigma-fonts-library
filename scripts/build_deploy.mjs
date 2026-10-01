@@ -21,12 +21,13 @@
  *   node scripts/build_deploy.mjs
  */
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
-import { CACHE_DIR, DIST_DIR, FONTS_DIR, MANIFEST_PATH, REPO_ROOT, getScriptPath } from './lib/repoPaths.mjs';
+import { DIST_DIR, FONTS_DIR, MANIFEST_PATH, REPO_ROOT, SCRIPTS } from './lib/repoPaths.mjs';
+import { regenerateManifest } from './lib/runScripts.mjs';
 
 const HEADERS = `/fonts/*
   Access-Control-Allow-Origin: *
@@ -60,7 +61,7 @@ function deployGlyphBlocks(variantPath) {
 
 function deployWeight(weight) {
   const [, family, variant] = weight.atlas.split(path.sep);
-  const ttf = resolveVariantTtf(FONTS_DIR, CACHE_DIR, family, variant);
+  const ttf = resolveVariantTtf(family, variant);
 
   linkFile(path.join(REPO_ROOT, weight.atlas), weight.atlas);
   linkFile(path.join(REPO_ROOT, weight.texture), weight.texture);
@@ -89,8 +90,8 @@ function deployEntry(entry) {
 }
 
 function main() {
-  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
-  execFileSync('python3', [getScriptPath('generate_previews_bundle.py')], { stdio: 'inherit' });
+  regenerateManifest();
+  execFileSync('python3', [SCRIPTS.generatePreviewsBundle], { stdio: 'inherit' });
   fs.rmSync(DIST_DIR, { force: true, recursive: true });
   fs.mkdirSync(path.join(DIST_DIR, 'fonts'), { recursive: true });
 

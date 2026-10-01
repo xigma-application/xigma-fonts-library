@@ -1,6 +1,6 @@
 /**
- * The msdf-bmfont-xml call every atlas bake shares — the whole-variant atlas (scripts/bake_atlas.cjs)
- * and the Unicode glyph blocks (scripts/bake_glyph_block.cjs) must use identical parameters
+ * The msdf-bmfont-xml call every atlas bake shares — the whole-variant atlas (scripts/atlas/bake_atlas.cjs)
+ * and the Unicode glyph blocks (scripts/atlas/bake_glyph_block.cjs) must use identical parameters
  * (fontSize=64, distanceRange=6, texturePadding=2), or glyphs from a block would not line up with the
  * glyphs of the main atlas they are drawn next to.
  */

@@ -7,16 +7,16 @@
  * A block without any character of the font is written as `{"chars":[]}` with no texture.
  *
  * Usage:
- *   node scripts/bake_glyph_block.cjs --font <static.ttf> --block AC00 --out-dir <variant>/glyphs --name <variant>
+ *   node scripts/atlas/bake_glyph_block.cjs --font <static.ttf> --block AC00 --out-dir <variant>/glyphs --name <variant>
  */
 
 const fs = require('fs');
 const path = require('path');
 const opentype = require('opentype.js');
 
-const { bakeMsdfAtlas, writeMsdfAtlas } = require('./lib/bakeMsdfAtlas.cjs');
-const { GLYPH_BLOCK_SIZE, getGlyphBlockName } = require('./lib/glyphBlocks.cjs');
-const { parseArgs, requireArg } = require('./lib/parseArgs.cjs');
+const { bakeMsdfAtlas, writeMsdfAtlas } = require('../lib/bakeMsdfAtlas.cjs');
+const { GLYPH_BLOCK_SIZE, getGlyphBlockName } = require('../lib/glyphBlocks.cjs');
+const { parseArgs, requireArg } = require('../lib/parseArgs.cjs');
 
 function getBlockCharset(font, blockStart) {
   const glyphIndexMap = font.tables.cmap.glyphIndexMap;

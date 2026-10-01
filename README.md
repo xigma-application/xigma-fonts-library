@@ -39,7 +39,7 @@ without shipping font binaries or the generator tooling inside the app's own bun
 > | `npm run fonts:previews`          | Generate the picker preview SVG for every font                                                                      |
 > | `npm run fonts:manifest`          | Rebuild `fonts/manifest.json` (which variants are actually baked)                                                   |
 > | `npm run fonts:serve`             | Local server on `:7720` that bakes a missing atlas on first request                                                 |
-> | `npm run bake`                    | Bake a single variant (`scripts/bake_font.sh`)                                                                      |
+> | `npm run bake`                    | Bake a single variant (`scripts/atlas/bake_font.sh`)                                                                |
 
 ## Why this repo exists
 
@@ -80,14 +80,14 @@ existing one. So the baking unit is font × weight × style, e.g. `Inter-400`, `
 
 ## Pipeline
 
-Two steps, one per language, chained by `scripts/bake_font.sh`:
+Two steps, one per language, chained by `scripts/atlas/bake_font.sh`:
 
-1. **`scripts/freeze_variable_font.py`** (Python, `fonttools`) — freezes a variable-font TTF to a
+1. **`scripts/atlas/freeze_variable_font.py`** (Python, `fonttools`) — freezes a variable-font TTF to a
    static weight/style instance via `fontTools.varLib.instancer`. Generalizes the one-off, manual
    step `xigma-app` used to produce its committed `Inter-Regular.ttf` (`wght=400 opsz=14`) before
    running its own `generate:font-atlas`. MSDF baking can't consume a variable font's axes directly,
    hence this step.
-2. **`scripts/bake_atlas.cjs`** (Node, `msdf-bmfont-xml`) — bakes the MSDF atlas from that static
+2. **`scripts/atlas/bake_atlas.cjs`** (Node, `msdf-bmfont-xml`) — bakes the MSDF atlas from that static
    TTF, using the same parameters `xigma-app` tuned and verified (`fontSize=64`, `distanceRange=6`,
    `texturePadding=2`, `msdf`/`json`) — see `xigma-app/docs/ROADMAP.md`, Etap 7, for why those exact
    values. Uses the library's programmatic API rather than its CLI, since the CLI always names the
@@ -105,7 +105,7 @@ npm install
 mkdir -p fonts/Inter/Inter-700
 cp fonts/Inter/Inter-400/charset.txt fonts/Inter/Inter-700/charset.txt   # or your own
 
-scripts/bake_font.sh fonts/Inter/Inter-700 /path/to/Inter[opsz,wght].ttf wght=700 opsz=14
+scripts/atlas/bake_font.sh fonts/Inter/Inter-700 /path/to/Inter[opsz,wght].ttf wght=700 opsz=14
 ```
 
 Produces, per variant — grouped `<FontName>/<FontName>-<variant>/`:
@@ -120,8 +120,8 @@ fonts/Inter/Inter-700/
   Inter-700-msdf.png         # the MSDF atlas texture
 ```
 
-Each step is also independently runnable — `python scripts/freeze_variable_font.py <in> <out>
-<axis=value>...` and `node scripts/bake_atlas.cjs --font <ttf> --charset <file> --out-dir <dir>
+Each step is also independently runnable — `python scripts/atlas/freeze_variable_font.py <in> <out>
+<axis=value>...` and `node scripts/atlas/bake_atlas.cjs --font <ttf> --charset <file> --out-dir <dir>
 --name <name>` — see each file's own docstring/`--help`.
 
 ## `data/google-fonts-catalog.json` + `fonts/manifest.json` — the frontend-facing font list
@@ -131,10 +131,10 @@ Two layers, kept deliberately separate:
 - **`data/google-fonts-catalog.json`** — the full "what could we offer" list: every Google Fonts
   family + its available weights/styles (2292 entries — 1946 families, some with a separate
   `"<Family> Italic"` entry), fetched once from Google's own public metadata endpoint
-  (`fonts.google.com/metadata/fonts`) via `node scripts/fetch_google_fonts_catalog.mjs`. This is
+  (`fonts.google.com/metadata/fonts`) via `node scripts/catalog/fetch_google_fonts_catalog.mjs`. This is
   reference data, not a bake output — re-run it occasionally to pick up new/changed fonts, it isn't
   wired into `bake_font.sh`.
-- **`fonts/manifest.json`** — `scripts/generate_manifest.mjs` turns that catalog into the manifest.
+- **`fonts/manifest.json`** — `scripts/catalog/generate_manifest.mjs` turns that catalog into the manifest.
   Every entry, and every weight, always carries `preview`/`atlas`/`texture` — computed from this
   repo's own naming convention (the same one `bake_font.sh` writes to), not conditional on whether
   anything's actually been baked in this checkout. A consumer always knows the path a font _would_
@@ -189,9 +189,9 @@ unbaked `atlas`/`texture` paths are. `name` is a display name, not a raw slug �
 under their own `"<FontName> Italic"` entry rather than mixing into the roman family's `weights`,
 matching how a family/style picker would present them. Sorting is explicit alphabetical
 (`localeCompare` with `{ sensitivity: 'base' }`, not the runtime's default locale) across all 2292
-entries. Regenerate manually any time without a bake: `node scripts/generate_manifest.mjs`.
+entries. Regenerate manually any time without a bake: `node scripts/catalog/generate_manifest.mjs`.
 
-## `scripts/generate_preview_svg.py` — Figma-style picker previews
+## `scripts/previews/generate_preview_svg.py` — Figma-style picker previews
 
 A font picker showing 1600+ rows can't load a real webfont per row just to render the family name —
 Figma's own picker avoids this by pre-rendering each name as a small SVG built directly from the
@@ -202,8 +202,8 @@ walks the glyphs for a given string, flips the y-axis (font outlines are y-up, S
 in per-glyph x-advance, and crops the `viewBox` tightly to the actual ink.
 
 ```bash
-python scripts/generate_preview_svg.py fonts/Inter/Inter-400/source/Inter-400.ttf "Inter" "fonts/Inter/Inter.svg"
-python scripts/generate_preview_svg.py fonts/Inter/Inter-400-Italic/source/Inter-400-Italic.ttf "Inter Italic" "fonts/Inter/Inter Italic.svg"
+python scripts/previews/generate_preview_svg.py fonts/Inter/Inter-400/source/Inter-400.ttf "Inter" "fonts/Inter/Inter.svg"
+python scripts/previews/generate_preview_svg.py fonts/Inter/Inter-400-Italic/source/Inter-400-Italic.ttf "Inter Italic" "fonts/Inter/Inter Italic.svg"
 ```
 
 One SVG per family/style is enough — unlike the atlas (genuinely different outlines per weight),
@@ -212,7 +212,7 @@ named after the display name verbatim, spaces and all (`fonts/<Family>/<name>.sv
 `fonts/Advent Pro/Advent Pro Italic.svg`), which `generate_manifest.mjs` picks up automatically and
 adds as that group's `preview` field — see above.
 
-## `scripts/generate_all_previews.mjs` — every font in the catalog, not just Inter
+## `scripts/previews/generate_all_previews.mjs` — every font in the catalog, not just Inter
 
 Runs the previous script for all 2292 `data/google-fonts-catalog.json` entries at once — a picker
 needs every row's preview available up front (unlike the atlas, which is only ever needed for the
@@ -231,7 +231,7 @@ directly: `x-ratelimit-remaining: 0` after ~90 lookups) — CSS2/gstatic is the 
 CDN, built for exactly this kind of volume.
 
 ```bash
-node scripts/generate_all_previews.mjs
+node scripts/previews/generate_all_previews.mjs
 ```
 
 Skips any entry that already has a preview on disk, so it's safe to re-run after the catalog
@@ -242,7 +242,7 @@ script with no glyphs to render their own Latin-alphabet name (Khmer, Noto Serif
 *Emoji, Karla Tamil *, ...), plus a handful where Google's CSS2 API doesn't serve a plain `400`
 for that specific family. Failure details land in `.cache/preview-failures.json` (gitignored).
 
-## `scripts/download_all_fonts.mjs` — every source TTF, no baking
+## `scripts/catalog/download_all_fonts.mjs` — every source TTF, no baking
 
 **`npm run fonts:download`** — downloads the source TTF for every `(family, weight, style)` in
 `data/google-fonts-catalog.json` into `.cache/css-instances/<Family>/`, the exact files
@@ -252,18 +252,18 @@ before going offline) and bake later. Same source as below (Google's CSS2 API vi
 failures to `.cache/download-failures.json`. Expect ~58 failures: weights the catalog lists but
 Google's CSS2 API doesn't actually serve (e.g. `1` or `1000`).
 
-## `scripts/bake_all_fonts.mjs` — the whole catalog, baked up front
+## `scripts/atlas/bake_all_fonts.mjs` — the whole catalog, baked up front
 
 Like `generate_all_previews.mjs`, but for the real atlas — every `(family, weight, style)` in
 `data/google-fonts-catalog.json`, not just one representative weight. Source TTF comes from
 `scripts/lib/googleFontsCss.mjs` (Google's CSS2 API again, requesting the _exact_ weight instead of
-a fixed 400), which sidesteps `scripts/freeze_variable_font.py` entirely — Google's servers already
-instance it, so this feeds straight into `scripts/bake_atlas.cjs`. Same reasoning as the preview
+a fixed 400), which sidesteps `scripts/atlas/freeze_variable_font.py` entirely — Google's servers already
+instance it, so this feeds straight into `scripts/atlas/bake_atlas.cjs`. Same reasoning as the preview
 script for why this beats `scripts/lib/googleFontsSource.mjs` (GitHub) as a source: no rate limit,
 and it works for static-only families too, not just the ones with a `[...]` variable font.
 
 ```bash
-node scripts/bake_all_fonts.mjs
+node scripts/atlas/bake_all_fonts.mjs
 ```
 
 Skips anything already baked, so it's safe to re-run/resume — real run, in three resumed pieces
@@ -315,7 +315,7 @@ rather than a silent 404 — on-demand _atlas_ baking doesn't have the CSS2-API 
 preview script does, since it needs the freezable variable font, not a pre-instanced one.
 
 Not every variable font shares the same axes — `Roboto[wdth,wght].ttf` has no `opsz` axis, for
-example, unlike Inter. `scripts/freeze_variable_font.py` now drops a pin for an axis the font
+example, unlike Inter. `scripts/atlas/freeze_variable_font.py` now drops a pin for an axis the font
 doesn't have (printing a note to stderr) instead of crashing, so the server's blanket `opsz=14`
 convention pin doesn't break every family that lacks that axis.
 
@@ -330,7 +330,7 @@ padding 2), so its glyphs share the atlas's baseline and scale:
 fonts/<Family>/<variant>/glyphs/<variant>-glyphs-uAC00-msdf.json|png   # U+AC00–U+ACFF
 ```
 
-- `scripts/bake_glyph_block.cjs --font <ttf> --block AC00 --out-dir <variant>/glyphs --name <variant>`
+- `scripts/atlas/bake_glyph_block.cjs --font <ttf> --block AC00 --out-dir <variant>/glyphs --name <variant>`
   bakes one block (kerning left out); a block with none of the font's characters is written as
   `{"chars":[]}` with no texture, so it is not baked again.
 - `scripts/serve.mjs` bakes a block on its first request (the PNG of an empty block is a 404).
@@ -387,7 +387,7 @@ wherever they want the result to end up:
 `fonts/manifest.json`'s `atlas`/`texture`/`preview` paths are always present, for every entry — see
 the catalog/manifest section above for why (deterministic, convention-based, not conditional on a
 local bake) — with `baked` as the per-weight signal for whether an atlas path is a guaranteed hit
-today. A consumer runs `scripts/bake_font.sh` (or `scripts/serve.mjs`'s bake-on-miss, or their own
+today. A consumer runs `scripts/atlas/bake_font.sh` (or `scripts/serve.mjs`'s bake-on-miss, or their own
 CI) to actually materialize a given atlas, into whatever storage they've chosen — local disk for
 dev, a CDN for production — then re-runs `generate_manifest.mjs`, which flips `baked` to `true` once
 it finds the files on disk.
@@ -400,7 +400,7 @@ completely different scale problem than the atlas/source GB figures below.
 
 **Sizing, for why the atlas/source split matters**: this was estimated at ~6 GB (Inter's own
 ~760 KB/variant × Google's own average of 4.04 styles/family × 1946 families) before
-`scripts/bake_all_fonts.mjs` actually baked the full catalog — real measured total came in at
+`scripts/atlas/bake_all_fonts.mjs` actually baked the full catalog — real measured total came in at
 **`fonts/` ~2.6 GB + `.cache/` ~4.7 GB**, in the same ballpark. Either way, nowhere close to
 git-shippable, which is exactly why atlas/source stay gitignored while previews (a completely
 different, much smaller order of magnitude — 33 MB total) don't.
@@ -420,7 +420,7 @@ a local, gitignored artifact of having run the pipeline, same as any other consu
 
 - On-demand TTF download and bake-on-miss atlas generation **are** built now
   (`scripts/serve.mjs`) — but it still sources from GitHub/`googleFontsSource.mjs`, so it only
-  covers variable-font families, same limitation as before. `scripts/bake_all_fonts.mjs` doesn't
+  covers variable-font families, same limitation as before. `scripts/atlas/bake_all_fonts.mjs` doesn't
   have this limitation (it uses the CSS2-API path, `googleFontsCss.mjs`, which works for
   static-only families too) — `serve.mjs` just hasn't been switched over to it, since with the
   full catalog now pre-baked, on-demand baking is mostly moot until the catalog itself changes.

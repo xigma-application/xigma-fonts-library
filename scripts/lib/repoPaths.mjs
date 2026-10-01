@@ -17,6 +17,24 @@ export const FULL_GLYPHS_PATH = path.join(REPO_ROOT, 'data', 'full-glyphs.json')
 export const MANIFEST_PATH = path.join(FONTS_DIR, 'manifest.json');
 export const DEFAULT_CHARSET_PATH = path.join(FONTS_DIR, 'Inter', 'Inter-400', 'charset.txt');
 
-export function getScriptPath(name) {
-  return path.join(SCRIPTS_DIR, name);
-}
+/**
+ * Every script another script runs as a child process. scripts/ is grouped by what a script works on:
+ * catalog/ (the font list, its source TTFs, the manifest), atlas/ (MSDF atlases and the TTFs they are
+ * baked from) and previews/ (picker preview SVGs).
+ */
+export const SCRIPTS = {
+  bakeAllFonts: path.join(SCRIPTS_DIR, 'atlas', 'bake_all_fonts.mjs'),
+  bakeAtlas: path.join(SCRIPTS_DIR, 'atlas', 'bake_atlas.cjs'),
+  bakeFont: path.join(SCRIPTS_DIR, 'atlas', 'bake_font.sh'),
+  bakeGlyphBlock: path.join(SCRIPTS_DIR, 'atlas', 'bake_glyph_block.cjs'),
+  bakeSmallCaps: path.join(SCRIPTS_DIR, 'atlas', 'bake_small_caps.mjs'),
+  buildFullGlyphTtf: path.join(SCRIPTS_DIR, 'atlas', 'build_full_glyph_ttf.py'),
+  buildSmallCapsTtf: path.join(SCRIPTS_DIR, 'atlas', 'build_small_caps_ttf.py'),
+  downloadAllFonts: path.join(SCRIPTS_DIR, 'catalog', 'download_all_fonts.mjs'),
+  fetchGoogleFontsCatalog: path.join(SCRIPTS_DIR, 'catalog', 'fetch_google_fonts_catalog.mjs'),
+  freezeVariableFont: path.join(SCRIPTS_DIR, 'atlas', 'freeze_variable_font.py'),
+  generateAllPreviews: path.join(SCRIPTS_DIR, 'previews', 'generate_all_previews.mjs'),
+  generateManifest: path.join(SCRIPTS_DIR, 'catalog', 'generate_manifest.mjs'),
+  generatePreviewSvg: path.join(SCRIPTS_DIR, 'previews', 'generate_preview_svg.py'),
+  generatePreviewsBundle: path.join(SCRIPTS_DIR, 'previews', 'generate_previews_bundle.py'),
+};

@@ -33,18 +33,19 @@ import zlib from 'node:zlib';
 
 import { DEV_PORTS } from '@xigma/utils';
 
-import glyphBlocks from './lib/glyphBlocks.cjs';
-import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
-import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
-import { CACHE_DIR, FONTS_DIR, getScriptPath } from './lib/repoPaths.mjs';
 import { loadCatalog } from './lib/catalog.mjs';
-import { ensureCharset, getVariantName } from './lib/variants.mjs';
+import { resolveVariantTtf } from './lib/fontSourcePaths.mjs';
+import glyphBlocks from './lib/glyphBlocks.cjs';
+import { ensureSourceTtf } from './lib/googleFontsSource.mjs';
+import { CACHE_DIR, FONTS_DIR, MANIFEST_PATH, SCRIPTS } from './lib/repoPaths.mjs';
+import { regenerateManifest, runBakeGlyphBlock } from './lib/runScripts.mjs';
+import { ensureCharset, getVariantDir, getVariantName, getVariantTtfPath } from './lib/variants.mjs';
 
 const DEFAULT_OPSZ = 14; // matches xigma-app's own pin, see README
 
 const ATLAS_PATH_PATTERN = /^([^/]+)\/([^/]+)-(\d{1,4})(-Italic)?\/\2-\3\4-msdf\.(json|png)$/;
 // Preview filenames are named after the display name verbatim ("Inter Italic.svg", space —
-// matching scripts/generate_all_previews.mjs), not the dash convention atlas variant dirs use.
+// matching scripts/previews/generate_all_previews.mjs), not the dash convention atlas variant dirs use.
 const PREVIEW_PATH_PATTERN = /^([^/]+)\/\1( Italic)?\.svg$/;
 const SOURCE_TTF_PATH_PATTERN = /^([^/]+)\/([^/]+)\/source\/\2\.ttf$/;
 
@@ -59,38 +60,24 @@ const CONTENT_TYPES = {
 const GZIP_EXTENSIONS = new Set(['.json', '.svg']);
 
 async function bakeVariant(family, weight, italic) {
-  const sourceTtf = await ensureSourceTtf(CACHE_DIR, family, italic);
-  const variantDir = path.join(FONTS_DIR, family, getVariantName(family, weight, italic));
+  const sourceTtf = await ensureSourceTtf(family, italic);
+  const variantDir = getVariantDir(family, getVariantName(family, weight, italic));
 
   ensureCharset(variantDir);
 
-  execFileSync('bash', [getScriptPath('bake_font.sh'), variantDir, sourceTtf, `wght=${weight}`, `opsz=${DEFAULT_OPSZ}`], {
+  execFileSync('bash', [SCRIPTS.bakeFont, variantDir, sourceTtf, `wght=${weight}`, `opsz=${DEFAULT_OPSZ}`], {
     stdio: 'inherit',
   });
 }
 
 function bakeGlyphBlock(family, variant, blockHex) {
-  const ttf = resolveVariantTtf(FONTS_DIR, CACHE_DIR, family, variant);
+  const font = resolveVariantTtf(family, variant);
 
-  if (ttf) {
-    execFileSync(
-      'node',
-      [
-        getScriptPath('bake_glyph_block.cjs'),
-        '--font',
-        ttf,
-        '--block',
-        blockHex,
-        '--out-dir',
-        glyphBlocks.getGlyphBlockDir(FONTS_DIR, family, variant),
-        '--name',
-        variant,
-      ],
-      { stdio: 'inherit' },
-    );
+  if (font) {
+    runBakeGlyphBlock({ blockHex, font, outDir: glyphBlocks.getGlyphBlockDir(FONTS_DIR, family, variant), stdio: 'inherit', variant });
   }
 
-  return Boolean(ttf);
+  return Boolean(font);
 }
 
 async function bakePreview(family, italic, name) {
@@ -108,21 +95,21 @@ async function bakePreview(family, italic, name) {
   let staticTtf;
 
   if (existingVariantDir) {
-    staticTtf = path.join(FONTS_DIR, family, existingVariantDir.name, 'source', `${existingVariantDir.name}.ttf`);
+    staticTtf = getVariantTtfPath(family, existingVariantDir.name);
   } else {
-    const sourceTtf = await ensureSourceTtf(CACHE_DIR, family, italic);
+    const sourceTtf = await ensureSourceTtf(family, italic);
     const variantName = `${family}-400${styleSuffix}`;
     staticTtf = path.join(CACHE_DIR, 'preview-instances', `${variantName}.ttf`);
 
     if (!fs.existsSync(staticTtf)) {
       fs.mkdirSync(path.dirname(staticTtf), { recursive: true });
-      execFileSync('python3', [getScriptPath('freeze_variable_font.py'), sourceTtf, staticTtf, 'wght=400', `opsz=${DEFAULT_OPSZ}`]);
+      execFileSync('python3', [SCRIPTS.freezeVariableFont, sourceTtf, staticTtf, 'wght=400', `opsz=${DEFAULT_OPSZ}`]);
     }
   }
 
   const outputPath = path.join(FONTS_DIR, family, `${name}.svg`);
 
-  execFileSync('python3', [getScriptPath('generate_preview_svg.py'), staticTtf, name, outputPath]);
+  execFileSync('python3', [SCRIPTS.generatePreviewSvg, staticTtf, name, outputPath]);
 }
 
 function sendFile(req, res, filePath) {
@@ -218,7 +205,7 @@ async function handleFontsRequest(req, res, relativePath) {
   }
 
   const sourceMatch = relativePath.match(SOURCE_TTF_PATH_PATTERN);
-  const sourceTtf = sourceMatch && resolveVariantTtf(FONTS_DIR, CACHE_DIR, sourceMatch[1], sourceMatch[2]);
+  const sourceTtf = sourceMatch && resolveVariantTtf(sourceMatch[1], sourceMatch[2]);
 
   if (sourceTtf) {
     sendFile(req, res, sourceTtf);
@@ -226,10 +213,6 @@ async function handleFontsRequest(req, res, relativePath) {
   }
 
   sendError(res, 404, `not found: fonts/${relativePath}`);
-}
-
-function regenerateManifest() {
-  execFileSync('node', [getScriptPath('generate_manifest.mjs')], { stdio: 'inherit' });
 }
 
 async function handleRequest(req, res) {
@@ -241,7 +224,7 @@ async function handleRequest(req, res) {
 
     if (pathname === '/fonts/manifest.json') {
       regenerateManifest();
-      sendFile(req, res, path.join(FONTS_DIR, 'manifest.json'));
+      sendFile(req, res, MANIFEST_PATH);
       return;
     }
 

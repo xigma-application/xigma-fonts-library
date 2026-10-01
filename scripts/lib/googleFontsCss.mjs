@@ -2,15 +2,17 @@
  * Fetches a single, already-instanced static TTF for an exact (family, weight, style) from
  * Google's own CSS2 API + gstatic CDN — no GitHub, no rate limit, works for static-only families
  * too (unlike scripts/lib/googleFontsSource.mjs, which needs an actual variable font to freeze
- * an arbitrary weight from). Used by scripts/bake_all_fonts.mjs and
- * scripts/generate_all_previews.mjs's underlying mechanism.
+ * an arbitrary weight from). Used by scripts/atlas/bake_all_fonts.mjs,
+ * scripts/catalog/download_all_fonts.mjs and scripts/previews/generate_all_previews.mjs.
  *
- * An old-browser User-Agent makes Google serve a plain .ttf instead of .woff2.
+ * Old/unrecognized browsers get served a plain .ttf; modern ones get .woff2 — an old-browser
+ * User-Agent is the well-known trick for pulling a raw TTF straight out of Google's CSS API.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { getInstancedTtfPath } from './fontSourcePaths.mjs';
 import { getVariantName } from './variants.mjs';
 
 const OLD_BROWSER_USER_AGENT = 'Mozilla/4.0';
@@ -35,9 +37,8 @@ async function fetchInstancedTtfUrl(family, weight, italic) {
   return match[1];
 }
 
-export async function ensureInstancedTtf(cacheDir, family, weight, italic) {
-  const cachedPath = path.join(cacheDir, 'css-instances', family, `${getVariantName(family, weight, italic)}.ttf`);
-
+/** Downloads the instanced TTF to `cachedPath` unless it is already there; returns `cachedPath`. */
+export async function ensureInstancedTtfAt(cachedPath, family, weight, italic) {
   if (!fs.existsSync(cachedPath)) {
     const ttfUrl = await fetchInstancedTtfUrl(family, weight, italic);
     const response = await fetch(ttfUrl);
@@ -53,4 +54,8 @@ export async function ensureInstancedTtf(cacheDir, family, weight, italic) {
   }
 
   return cachedPath;
+}
+
+export function ensureInstancedTtf(family, weight, italic) {
+  return ensureInstancedTtfAt(getInstancedTtfPath(family, getVariantName(family, weight, italic)), family, weight, italic);
 }

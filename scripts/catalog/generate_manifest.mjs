@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Writes fonts/manifest.json from data/google-fonts-catalog.json (the full "what could we offer"
- * list — 2292 entries, fetched via scripts/fetch_google_fonts_catalog.mjs).
+ * list — 2292 entries, fetched via scripts/catalog/fetch_google_fonts_catalog.mjs).
  *
  * Every weight gets `atlas`/`texture`/`font` paths, always — computed from this repo's own
  * naming convention (`fonts/<Family>/<Family>-<weight>[-Italic]/...`), the same convention
- * `scripts/bake_font.sh` writes to. These are deterministic, not conditional: a consumer always
+ * `scripts/atlas/bake_font.sh` writes to. These are deterministic, not conditional: a consumer always
  * knows the URL/path a font *would* live at, whether or not it's been baked in this checkout yet
  * — no branching on "does this entry have an atlas field." `font` is the variant's static TTF,
  * which a consumer needs for real vector outlines (flatten, booleans, SVG/PDF export) since an MSDF
@@ -16,22 +16,23 @@
  * preview SVGs are committed for the whole catalog, so a missing file means the font has no glyphs to
  * write its own name with (Khmer, Myanmar, emoji...), not that it still needs baking — it is null then,
  * and a picker shows the name in its own UI font instead. `smallCaps` is true for a weight whose atlas
- * scripts/bake_small_caps.mjs baked with the font's small caps (listed in data/small-caps.json).
- * `features` is the path of the OpenType feature data of a weight scripts/bake_full_glyphs.mjs baked with
+ * scripts/atlas/bake_small_caps.mjs baked with the font's small caps (listed in data/small-caps.json).
+ * `features` is the path of the OpenType feature data of a weight scripts/atlas/bake_full_glyphs.mjs baked with
  * every glyph of its font (listed in data/full-glyphs.json), null for the others.
  *
  * This is the "manifest/katalog dostępnych fontów" from xigma-app/docs/ROADMAP.md Etap 9 — what a
  * font picker in xigma-app's text-properties panel would fetch to know what's offerable.
  *
  * Usage:
- *   node scripts/generate_manifest.mjs
+ *   node scripts/catalog/generate_manifest.mjs
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { FONTS_DIR, FULL_GLYPHS_PATH, MANIFEST_PATH, SMALL_CAPS_PATH } from './lib/repoPaths.mjs';
-import { loadCatalog, loadFamilySet } from './lib/catalog.mjs';
-import { getVariantName } from './lib/variants.mjs';
+
+import { loadCatalog, loadFamilySet } from '../lib/catalog.mjs';
+import { FONTS_DIR, FULL_GLYPHS_PATH, MANIFEST_PATH, SMALL_CAPS_PATH } from '../lib/repoPaths.mjs';
+import { getVariantName, isAtlasBaked } from '../lib/variants.mjs';
 
 // Explicit locale + base sensitivity: case and accents don't affect ordering, and it's
 // deterministic regardless of the runtime's default ICU locale, unlike a bare a.localeCompare(b).
@@ -51,16 +52,13 @@ function resolveWeightPaths(family, weight, italic, smallCaps, fullGlyphs) {
   const atlas = toManifestPath(family, variant, `${baseName}.json`);
   const texture = toManifestPath(family, variant, `${baseName}.png`);
   const font = toManifestPath(family, variant, 'source', `${variant}.ttf`);
-  const baked =
-    fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.json`)) &&
-    fs.existsSync(path.join(FONTS_DIR, family, variant, `${baseName}.png`));
-
+  const baked = isAtlasBaked(family, variant);
   const features = baked && fullGlyphs.has(variant) ? toManifestPath(family, variant, `${variant}-features.json`) : null;
 
   return { weight, atlas, texture, font, baked, smallCaps: baked && smallCaps.has(variant), features };
 }
 
-// Matches scripts/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is
+// Matches scripts/previews/generate_all_previews.mjs and scripts/serve.mjs's bakePreview: the file is
 // named after `name` verbatim (spaces and all), not dash-replaced.
 function resolvePreviewPath(family, name) {
   return fs.existsSync(path.join(FONTS_DIR, family, `${name}.svg`)) ? toManifestPath(family, `${name}.svg`) : null;

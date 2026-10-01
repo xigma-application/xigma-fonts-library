@@ -20,7 +20,7 @@ The features file describes, in those ids, what xigma-app needs to shape text:
   - `unitsPerEm`: the unit every position is in
 
 Usage:
-  python scripts/build_full_glyph_ttf.py <source.ttf> <output.ttf> <output-charset.txt> <output-features.json>
+  python scripts/atlas/build_full_glyph_ttf.py <source.ttf> <output.ttf> <output-charset.txt> <output-features.json>
 """
 
 import argparse
@@ -29,12 +29,13 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 
+from font_tables import get_features, unwrap_subtable
+
 PUA_BASE = 0xF000
 PUA_LIMIT = 0xF8FF
 BMP_LIMIT = 0xFFFF
 IGNORE_MARKS_FLAG = 0x0008
 MARK_GLYPH_CLASS = 3
-EXTENSION_LOOKUP_TYPE = {"GSUB": 7, "GPOS": 9}
 
 
 def get_glyph_ids(font: TTFont) -> dict[str, int]:
@@ -52,13 +53,6 @@ def get_glyph_ids(font: TTFont) -> dict[str, int]:
     ids.update({glyph: PUA_BASE + index for index, glyph in enumerate(unmapped)})
 
     return ids
-
-
-def unwrap(subtable, lookup_type: int, table_tag: str):
-    if lookup_type == EXTENSION_LOOKUP_TYPE[table_tag]:
-        return subtable.ExtSubTable, subtable.ExtSubTable.LookupType
-
-    return subtable, lookup_type
 
 
 class SetPool:
@@ -164,7 +158,7 @@ def convert_gsub_lookup(lookup, ids: dict[str, int], pool: SetPool) -> dict:
     rules: list[dict] = []
 
     for raw_subtable in lookup.SubTable:
-        subtable, lookup_type = unwrap(raw_subtable, lookup.LookupType, "GSUB")
+        subtable, lookup_type = unwrap_subtable(raw_subtable, lookup.LookupType, "GSUB")
 
         if lookup_type == 1:
             converted["type"] = "single"
@@ -194,16 +188,6 @@ def convert_gsub_lookup(lookup, ids: dict[str, int], pool: SetPool) -> dict:
     return converted
 
 
-def get_features(table, table_tag: str) -> dict[str, list[int]]:
-    features: dict[str, set[int]] = {}
-
-    if table_tag in table and table[table_tag].table.FeatureList:
-        for record in table[table_tag].table.FeatureList.FeatureRecord:
-            features.setdefault(record.FeatureTag, set()).update(record.Feature.LookupListIndex)
-
-    return {tag: sorted(indices) for tag, indices in sorted(features.items())}
-
-
 def get_value(value) -> list[int]:
     return [getattr(value, "XPlacement", 0) or 0, getattr(value, "XAdvance", 0) or 0] if value else [0, 0]
 
@@ -212,7 +196,7 @@ def convert_single_positions(lookup, ids: dict[str, int]) -> dict[str, list[int]
     positions: dict[str, list[int]] = {}
 
     for raw_subtable in lookup.SubTable:
-        subtable, lookup_type = unwrap(raw_subtable, lookup.LookupType, "GPOS")
+        subtable, lookup_type = unwrap_subtable(raw_subtable, lookup.LookupType, "GPOS")
 
         if lookup_type == 1:
             glyphs = subtable.Coverage.glyphs
@@ -228,7 +212,7 @@ def convert_pair_positions(lookup, ids: dict[str, int]) -> list[dict]:
     kerning: list[dict] = []
 
     for raw_subtable in lookup.SubTable:
-        subtable, lookup_type = unwrap(raw_subtable, lookup.LookupType, "GPOS")
+        subtable, lookup_type = unwrap_subtable(raw_subtable, lookup.LookupType, "GPOS")
 
         if lookup_type != 2:
             continue

@@ -10,7 +10,7 @@ weights are genuinely different outlines), a name preview only needs one represe
 (Regular/400 by default) to be recognizable in a picker row.
 
 Usage:
-  python scripts/generate_preview_svg.py <static.ttf> "<text>" <output.svg>
+  python scripts/previews/generate_preview_svg.py <static.ttf> "<text>" <output.svg>
 """
 
 import argparse

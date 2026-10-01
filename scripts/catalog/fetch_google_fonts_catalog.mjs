@@ -3,20 +3,21 @@
  * Fetches the full Google Fonts family list (name + available weights/styles) from Google's own
  * public metadata endpoint and writes a lean, committed reference file: data/google-fonts-catalog.json.
  *
- * This is the "what could we offer" catalog — scripts/generate_manifest.mjs turns every entry here
+ * This is the "what could we offer" catalog — scripts/catalog/generate_manifest.mjs turns every entry here
  * into a fonts/manifest.json entry with computed (not conditional) atlas/texture/preview paths,
  * plus a `baked` flag per weight for whether that path is actually on disk right now.
  *
  * Re-run this occasionally to refresh the catalog as Google adds/changes fonts — it's not tied to
- * any bake, so there's no reason to run it as part of scripts/bake_font.sh.
+ * any bake, so there's no reason to run it as part of scripts/atlas/bake_font.sh.
  *
  * Usage:
- *   node scripts/fetch_google_fonts_catalog.mjs
+ *   node scripts/catalog/fetch_google_fonts_catalog.mjs
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { CATALOG_PATH } from './lib/repoPaths.mjs';
+
+import { CATALOG_PATH } from '../lib/repoPaths.mjs';
 
 const METADATA_URL = 'https://fonts.google.com/metadata/fonts';
 const STYLE_KEY_PATTERN = /^(\d{1,4})(i)?$/;

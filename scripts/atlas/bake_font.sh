@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Full pipeline for one (font, weight, style) baking unit: freeze the variable-font axes to a
-# static TTF (scripts/freeze_variable_font.py), then bake the MSDF atlas from it
-# (scripts/bake_atlas.cjs). See README.md for why this is the baking unit (not font size,
+# static TTF (scripts/atlas/freeze_variable_font.py), then bake the MSDF atlas from it
+# (scripts/atlas/bake_atlas.cjs). See README.md for why this is the baking unit (not font size,
 # line-height, letter-spacing, or paragraph-spacing — those never need a re-bake).
 #
 # Usage:
-#   scripts/bake_font.sh <variant-dir> <variable-font.ttf> <axis=value>...
+#   scripts/atlas/bake_font.sh <variant-dir> <variable-font.ttf> <axis=value>...
 #
 # <variant-dir> must already contain a charset.txt (the character-set decision for this variant).
 # Variants are grouped by font family: fonts/<FontName>/<FontName>-<variant>/.
 # Example:
-#   scripts/bake_font.sh fonts/Inter/Inter-400 /path/to/Inter[opsz,wght].ttf wght=400 opsz=14
+#   scripts/atlas/bake_font.sh fonts/Inter/Inter-400 /path/to/Inter[opsz,wght].ttf wght=400 opsz=14
 
 set -euo pipefail
 
@@ -41,4 +41,4 @@ node "$SCRIPT_DIR/bake_atlas.cjs" \
   --out-dir "$VARIANT_DIR" \
   --name "${NAME}-msdf"
 
-node "$SCRIPT_DIR/generate_manifest.mjs"
+node "$SCRIPT_DIR/../catalog/generate_manifest.mjs"

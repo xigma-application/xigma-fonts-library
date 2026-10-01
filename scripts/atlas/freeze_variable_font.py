@@ -9,8 +9,8 @@ to produce its committed Inter-Regular.ttf (wght=400 opsz=14) before running its
 instance per (font, weight, style) baking unit, e.g. inter-400, inter-700, inter-400-italic.
 
 Usage:
-  python scripts/freeze_variable_font.py <input.ttf> <output.ttf> wght=700
-  python scripts/freeze_variable_font.py <input.ttf> <output.ttf> wght=400 opsz=14 ital=1
+  python scripts/atlas/freeze_variable_font.py <input.ttf> <output.ttf> wght=700
+  python scripts/atlas/freeze_variable_font.py <input.ttf> <output.ttf> wght=400 opsz=14 ital=1
 """
 
 import argparse
@@ -18,24 +18,8 @@ import sys
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-from fontTools.varLib import instancer
 
-
-def parse_axis_args(axis_args: list[str]) -> dict[str, float]:
-    axes: dict[str, float] = {}
-
-    for arg in axis_args:
-        if "=" not in arg:
-            raise ValueError(f"invalid axis pin (expected TAG=VALUE): {arg!r}")
-
-        tag, _, raw_value = arg.partition("=")
-
-        try:
-            axes[tag] = float(raw_value)
-        except ValueError as error:
-            raise ValueError(f"invalid axis value for {tag!r}: {raw_value!r}") from error
-
-    return axes
+from font_tables import parse_axis_args, pin_axes
 
 
 def freeze_variable_font(input_path: Path, output_path: Path, axes: dict[str, float]) -> None:
@@ -44,14 +28,9 @@ def freeze_variable_font(input_path: Path, output_path: Path, axes: dict[str, fl
     if "fvar" not in font:
         raise ValueError(f"{input_path} has no 'fvar' table — it isn't a variable font")
 
-    # Not every variable font has every axis (Roboto has wdth/wght but no opsz, for example) —
-    # drop pins for axes this particular font doesn't have rather than failing. Safe here because
-    # our only caller passes house-style defaults (e.g. opsz=14) blanket across arbitrary fonts,
-    # not axes it's relying on being applied; a dropped pin just means "use this font's own
-    # default" for that axis, printed so it's visible rather than silent.
-    available_tags = {a.axisTag for a in font["fvar"].axes}
-    dropped_tags = set(axes) - available_tags
-    axes = {tag: value for tag, value in axes.items() if tag in available_tags}
+    # A pin for an axis the font doesn't have is dropped (see pin_axes) — printed so it's visible
+    # rather than silent.
+    available_tags, dropped_tags = pin_axes(font, axes)
 
     if dropped_tags:
         print(
@@ -59,8 +38,6 @@ def freeze_variable_font(input_path: Path, output_path: Path, axes: dict[str, fl
             f"ignoring those pin(s), available axes: {', '.join(sorted(available_tags))}",
             file=sys.stderr,
         )
-
-    instancer.instantiateVariableFont(font, axes, inplace=True)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     font.save(output_path)
